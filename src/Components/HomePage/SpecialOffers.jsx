@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import { formatPrice } from '../../lib/utils';
 
 const SpecialOffers = () => {
   const offers = [
@@ -79,8 +80,8 @@ const SpecialOffers = () => {
               {/* قیمت‌ها */}
               <div className="text-center mb-6">
                 <div className="flex items-center justify-center gap-3 mb-2">
-                  <span className="text-2xl font-bold">{offer.newPrice}</span>
-                  <span className="text-sm line-through opacity-75">{offer.originalPrice}</span>
+                  <span className="text-2xl font-bold">{formatPrice(offer.newPrice)}</span>
+                  <span className="text-sm line-through opacity-75">{formatPrice(offer.originalPrice)}</span>
                 </div>
                 <span className="text-sm opacity-90">تومان</span>
               </div>

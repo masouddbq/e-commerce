@@ -4,24 +4,24 @@ import BrandCategories from './BrandCategories';
 import PopularProducts from './PopularProducts';
 import FeaturesSection from './FeaturesSection';
 import CustomerReviews from './CustomerReviews';
-import BlogSection from './BlogSection';
 import NewsletterSection from './NewsletterSection';
 import SpecialOffers from './SpecialOffers';
 import AboutSection from './AboutSection';
 import FeaturedProducts from './FeaturedProducts';
+import QuickAccessButton from './QuickAccessButton';
 
 const HomePage = () => {
   return (
     <div className='flex flex-col w-full'>
       <BrandCategories />
       <HeroSlider />
+      <QuickAccessButton />
       <AboutSection />
       <FeaturesSection />
       <SpecialOffers />
       <FeaturedProducts />
       <PopularProducts />
       <CustomerReviews />
-      <BlogSection />
       <NewsletterSection />
     </div>
   )

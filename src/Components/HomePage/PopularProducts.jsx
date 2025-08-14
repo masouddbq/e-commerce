@@ -3,6 +3,7 @@ import FavoriteIcon from '@mui/icons-material/Favorite';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import { formatPrice } from '../../lib/utils';
 
 const PopularProducts = () => {
   const products = [
@@ -112,11 +113,11 @@ const PopularProducts = () => {
                   <div className="flex items-center gap-2">
                     {product.isOnSale ? (
                       <>
-                        <span className="text-lg font-bold text-red-600">{product.price} تومان</span>
-                        <span className="text-sm text-gray-500 line-through">{product.originalPrice}</span>
+                        <span className="text-lg font-bold text-red-600">{formatPrice(product.price)} تومان</span>
+                        <span className="text-sm text-gray-500 line-through">{formatPrice(product.originalPrice)}</span>
                       </>
                     ) : (
-                      <span className="text-lg font-bold text-gray-800">{product.price} تومان</span>
+                      <span className="text-lg font-bold text-gray-800">{formatPrice(product.price)} تومان</span>
                     )}
                   </div>
                   {product.isOnSale && (

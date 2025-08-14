@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
+import PersonIcon from '@mui/icons-material/Person';
+import LoginIcon from '@mui/icons-material/Login';
 
 // Vehicle data for each category
 const vehicleData = {
@@ -16,16 +18,16 @@ const vehicleData = {
   ],
   suv: [
     { id: 1, name: "جیلی", link: "/suv/jili" },
-    { id: 2, name: "شاسی بلند", link: "/suv/suv" },
-    { id: 3, name: "نیسان جوک", link: "/suv/nissan-juke" },
-    { id: 4, name: "هیوندای توسان", link: "/suv/hyundai-tucson" },
-    { id: 5, name: "کیا اسپورتیج", link: "/suv/kia-sportage" }
+    { id: 2, name: "نیسان جوک", link: "/suv/nissan-juke" },
+    { id: 3, name: "هیوندای توسان", link: "/suv/hyundai-tucson" },
+    { id: 4, name: "کیا اسپورتیج", link: "/suv/kia-sportage" },
+    { id: 5, name: "میتسوبیشی ASX", link: "/suv/mitsubishi-asx" }
   ],
   pickup: [
     { id: 1, name: "نیسان دیزل", link: "/pickup/nissan-diesel" },
-    { id: 2, name: "دیزل", link: "/pickup/diesel" },
-    { id: 3, name: "پیکاپ", link: "/pickup/pickup" },
-    { id: 4, name: "وانت", link: "/pickup/van" }
+    { id: 2, name: "تویوتا هیلوکس", link: "/pickup/toyota-hilux" },
+    { id: 3, name: "میتسوبیشی L200", link: "/pickup/mitsubishi-l200" },
+    { id: 4, name: "فورد رنجر", link: "/pickup/ford-ranger" }
   ]
 };
 
@@ -71,6 +73,25 @@ const Navbar = () => {
           {navPages.map(page => ( 
             <Link className='text-white text-sm mx-3 hover:text-orange-300 transition-colors duration-200' key={page.id} to={page.link}>{page.title}</Link>
           ))}
+          {/* Login/Register Icons */}
+          <div className='flex items-center space-x-2 mr-4'>
+            <Link 
+              to="/login" 
+              className='text-white hover:text-orange-300 transition-colors duration-200 flex items-center space-x-1'
+              title="ورود به پنل ادمین"
+            >
+              <LoginIcon className='text-lg' />
+              <span className='text-sm'>ورود</span>
+            </Link>
+            <Link 
+              to="/register" 
+              className='text-white hover:text-orange-300 transition-colors duration-200 flex items-center space-x-1'
+              title="ثبت‌نام ادمین"
+            >
+              <PersonIcon className='text-lg' />
+              <span className='text-sm'>ثبت‌نام</span>
+            </Link>
+          </div>
         </div>
         <h1 className='w-full h-10 text-center text-white text-2xl font-semibold'>لِنــت شـــــاپ</h1>
         <div className='flex justify-center items-center text-sm w-full'>
@@ -106,6 +127,7 @@ const Navbar = () => {
                       <Link
                         to={address.link}
                         className="block px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 font-medium"
+                        onClick={() => setOpenDropdown(null)}
                       >
                         مشاهده همه {address.title} →
                       </Link>
@@ -118,68 +140,110 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Mobile Navbar */}
-      <div className='lg:hidden bg-gradient-to-t from-blue-600 to-blue-900 shadow-2xl shadow-gray-400'>
+      {/* Mobile & Tablet Navbar */}
+      <div className='lg:hidden bg-gradient-to-t from-blue-600 to-blue-900 shadow-2xl shadow-gray-400 w-full'>
         {/* Mobile Header */}
-        <div className='flex justify-between items-center px-4 py-3'>
+        <div className='flex justify-between items-center px-4 py-2 w-full'>
           <button
             onClick={toggleMobileMenu}
-            className='text-white p-2 hover:bg-blue-700 rounded-lg transition-colors duration-200'
+            className='text-white p-1.5 hover:bg-blue-700 rounded-lg transition-colors duration-200'
           >
-            {mobileMenuOpen ? <CloseIcon /> : <MenuIcon />}
+            {mobileMenuOpen ? <CloseIcon className="text-lg" /> : <MenuIcon className="text-lg" />}
           </button>
           
-          <h1 className='text-white text-xl font-semibold text-center flex-1'>لِنــت شـــــاپ</h1>
+          <h1 className='text-white text-lg sm:text-xl font-semibold text-center flex-1'>لِنــت شـــــاپ</h1>
           
-          <div className='w-10'></div> {/* Spacer for centering */}
+          {/* Mobile Login/Register Icons */}
+          <div className='flex items-center space-x-2'>
+            <Link 
+              to="/login" 
+              className='text-white hover:text-orange-300 transition-colors duration-200 p-1.5'
+              title="ورود"
+            >
+              <LoginIcon className='text-lg' />
+            </Link>
+            <Link 
+              to="/register" 
+              className='text-white hover:text-orange-300 transition-colors duration-200 p-1.5'
+              title="ثبت‌نام"
+            >
+              <PersonIcon className='text-lg' />
+            </Link>
+          </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Menu - Compact & Minimal */}
         {mobileMenuOpen && (
-          <div className='bg-white border-t border-gray-200 shadow-lg'>
-            {/* Main Navigation */}
-            <div className='py-4'>
-              <h3 className='text-gray-600 font-semibold px-4 mb-3 text-sm'>منو اصلی</h3>
-              {navPages.map(page => (
+          <div className='bg-white border-t border-gray-200 shadow-lg w-full'>
+            {/* Main Navigation - Compact Horizontal */}
+            <div className='py-2 px-3 border-b border-gray-100'>
+              <div className='flex flex-wrap justify-center gap-1.5'>
+                {navPages.map(page => (
+                  <Link
+                    key={page.id}
+                    to={page.link}
+                    onClick={closeMobileMenu}
+                    className='px-2.5 py-1.5 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors duration-200 rounded-md text-xs sm:text-sm whitespace-nowrap bg-gray-50 hover:bg-blue-100'
+                  >
+                    {page.title}
+                  </Link>
+                ))}
+                {/* Mobile Login/Register Links */}
                 <Link
-                  key={page.id}
-                  to={page.link}
+                  to="/login"
                   onClick={closeMobileMenu}
-                  className='block px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors duration-200 border-b border-gray-100'
+                  className='px-2.5 py-1.5 text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition-colors duration-200 rounded-md text-xs sm:text-sm whitespace-nowrap bg-blue-50 hover:bg-blue-100'
                 >
-                  {page.title}
+                  ورود
                 </Link>
-              ))}
+                <Link
+                  to="/register"
+                  onClick={closeMobileMenu}
+                  className='px-2.5 py-1.5 text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition-colors duration-200 rounded-md text-xs sm:text-sm whitespace-nowrap bg-blue-50 hover:bg-blue-100'
+                >
+                  ثبت‌نام
+                </Link>
+              </div>
             </div>
 
-            {/* Vehicle Categories */}
-            <div className='py-4'>
-              <h3 className='text-gray-600 font-semibold px-4 mb-3 text-sm'>دسته‌بندی خودروها</h3>
-              {navAddresses.map(address => (
-                <div key={address.id} className='border-b border-gray-100'>
-                  <Link
-                    to={address.link}
-                    onClick={closeMobileMenu}
-                    className='block px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors duration-200'
-                  >
-                    {address.title}
-                  </Link>
-                  
-                  {/* Mobile Submenu */}
-                  <div className='bg-gray-50'>
-                    {vehicleData[address.category]?.map((vehicle) => (
-                      <Link
-                        key={vehicle.id}
-                        to={vehicle.link}
-                        onClick={closeMobileMenu}
-                        className='block px-8 py-2 text-sm text-gray-600 hover:bg-blue-100 hover:text-blue-700 transition-colors duration-200'
-                      >
-                        {vehicle.name}
-                      </Link>
-                    ))}
+            {/* Vehicle Categories - Compact Grid */}
+            <div className='py-2 px-3'>
+              <div className='grid grid-cols-3 gap-2'>
+                {navAddresses.map(address => (
+                  <div key={address.id} className='text-center'>
+                    <Link
+                      to={address.link}
+                      onClick={closeMobileMenu}
+                      className='block px-2 py-1.5 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors duration-200 rounded-md text-xs font-medium bg-gray-50 hover:bg-blue-100'
+                    >
+                      {address.title}
+                    </Link>
+                    
+                    {/* Compact Submenu */}
+                    <div className='mt-1 space-y-0.5'>
+                      {vehicleData[address.category]?.slice(0, 3).map((vehicle) => (
+                        <Link
+                          key={vehicle.id}
+                          to={vehicle.link}
+                          onClick={closeMobileMenu}
+                          className='block px-2 py-1 text-xs text-gray-600 hover:bg-blue-100 hover:text-blue-700 transition-colors duration-200 rounded text-center'
+                        >
+                          {vehicle.name}
+                        </Link>
+                      ))}
+                      {vehicleData[address.category]?.length > 3 && (
+                        <Link
+                          to={address.link}
+                          onClick={closeMobileMenu}
+                          className='block px-2 py-1 text-xs text-blue-600 hover:bg-blue-100 font-medium rounded text-center'
+                        >
+                          +{vehicleData[address.category].length - 3} بیشتر
+                        </Link>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         )}

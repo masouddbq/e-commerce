@@ -1,171 +1,577 @@
 import React, { useState, useEffect } from "react";
-import { supabase } from "../../lib/supabase";
+import { useNavigate } from "react-router-dom";
+import { supabase, uploadProductImage, deleteProductImage } from "../../lib/supabase";
+import { formatPriceWithUnit } from "../../lib/utils";
 
 const AdminPanel = () => {
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedBrand, setSelectedBrand] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [stats, setStats] = useState({
-    totalProducts: 0,
-    totalCategories: 0,
-    lowStock: 0
-  });
+  const [addingProduct, setAddingProduct] = useState(false);
+  const [deletingProduct, setDeletingProduct] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+  const [activeTab, setActiveTab] = useState('products'); // 'products' یا 'brands'
+  
+  // State برای مدیریت برندها و دسته‌بندی‌ها
+  const [showAddBrandForm, setShowAddBrandForm] = useState(false);
+  const [showAddCategoryForm, setShowAddCategoryForm] = useState(false);
+  const [editingBrand, setEditingBrand] = useState(null);
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [newBrand, setNewBrand] = useState({ name: "", description: "" });
+  const [newCategory, setNewCategory] = useState({ name: "", description: "" });
+  const [addingBrand, setAddingBrand] = useState(false);
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [deletingBrand, setDeletingBrand] = useState(false);
+  const [deletingCategory, setDeletingCategory] = useState(false);
+  const [showDeleteBrandConfirm, setShowDeleteBrandConfirm] = useState(null);
+  const [showDeleteCategoryConfirm, setShowDeleteCategoryConfirm] = useState(null);
+
+  // State برای آپلود عکس
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  // فرم محصول جدید - کامل
   const [newProduct, setNewProduct] = useState({
     name: "",
-    description: "",
     price: "",
-    category: "",
+    originalPrice: "",
     brand: "",
-    stock: "",
-    images: [],
-    specifications: {},
+    category: "",
+    vehicleType: "", // اضافه کردن فیلد نوع خودرو
+    suitableFor: "",
+    stockStatus: "موجود",
+    stockCount: "",
+    description: "",
+    material: "",
+    thickness: "",
+    weight: "",
+    temperature: "",
+    warranty: "",
+    features: [""],
+    reviewUser: "",
+    reviewRating: 5,
+    reviewComment: "",
+    reviewDate: "",
+    image: "" // اضافه کردن فیلد عکس
   });
-  const [imageFiles, setImageFiles] = useState([]);
-  const [uploadingImages, setUploadingImages] = useState(false);
 
+  // برندها و دسته‌بندی‌ها - حالا از دیتابیس
+  const [defaultBrands, setDefaultBrands] = useState([]);
+  const [defaultCategories, setDefaultCategories] = useState([]);
+
+  // بررسی احراز هویت
   useEffect(() => {
+    const adminToken = localStorage.getItem('adminToken');
+    if (!adminToken) {
+      navigate('/login');
+      return;
+    }
     fetchProducts();
-    fetchStats();
-  }, []);
+    fetchBrands();
+    fetchCategories();
+    
+    // تنظیم real-time subscription
+    const channel = supabase
+      .channel('products_changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'products' }, 
+        (payload) => {
+          console.log('Real-time change:', payload);
+          fetchProducts(); // بروزرسانی خودکار
+        }
+      )
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'brands' }, 
+        (payload) => {
+          console.log('Real-time brands change:', payload);
+          fetchBrands(); // بروزرسانی خودکار
+        }
+      )
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'categories' }, 
+        (payload) => {
+          console.log('Real-time categories change:', payload);
+          fetchCategories(); // بروزرسانی خودکار
+        }
+      )
+      .subscribe();
 
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [navigate]);
+
+  // دریافت محصولات از دیتابیس
   const fetchProducts = async () => {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from("products")
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching products:", error);
+        setProducts([]);
+      } else {
       setProducts(data || []);
+      }
     } catch (error) {
       console.error("Error fetching products:", error);
+      setProducts([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchStats = async () => {
+  // دریافت برندها از دیتابیس
+  const fetchBrands = async () => {
     try {
-      const { data: productsData } = await supabase
-        .from("products")
-        .select("category, stock");
-      
-      if (productsData) {
-        const categories = new Set(productsData.map(p => p.category));
-        const lowStockCount = productsData.filter(p => p.stock < 10).length;
-        
-        setStats({
-          totalProducts: productsData.length,
-          totalCategories: categories.size,
-          lowStock: lowStockCount
-        });
+      const { data, error } = await supabase
+        .from("brands")
+        .select("*");
+
+      if (error) {
+        console.error("Error fetching brands:", error);
+        // اگر جدول وجود ندارد، برندهای پیش‌فرض را اضافه کن
+        await initializeDefaultBrands();
+      } else {
+        setDefaultBrands(data.map(brand => brand.name) || []);
       }
     } catch (error) {
-      console.error("Error fetching stats:", error);
+      console.error("Error fetching brands:", error);
+      await initializeDefaultBrands();
     }
   };
 
+  // دریافت دسته‌بندی‌ها از دیتابیس
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*");
+
+      if (error) {
+        console.error("Error fetching categories:", error);
+        // اگر جدول وجود ندارد، دسته‌بندی‌های پیش‌فرض را اضافه کن
+        await initializeDefaultCategories();
+      } else {
+        setDefaultCategories(data.map(category => category.name) || []);
+      }
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      await initializeDefaultCategories();
+    }
+  };
+
+  // راه‌اندازی برندهای پیش‌فرض
+  const initializeDefaultBrands = async () => {
+    const defaultBrandsList = [
+      "تویوتا", "هیوندای", "نیسان", "کیا", "لکسوس", "جیلی", "مزدا", 
+      "ام‌جی", "میتسوبیشی", "فولکس‌واگن", "سایپا", "سوزوکی", 
+      "رنو", "پژو", "ایران خودرو", "فاو", "جی‌ای‌سی"
+    ];
+
+    try {
+      // ابتدا سعی کن از جدول brands بخوانی
+      const { data, error } = await supabase
+        .from('brands')
+        .select('*');
+
+      if (error) {
+        console.log("Brands table doesn't exist, using local state");
+        // جدول وجود ندارد، از state محلی استفاده کن
+        setDefaultBrands(defaultBrandsList);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        // جدول وجود دارد و داده دارد
+        setDefaultBrands(data.map(brand => brand.name));
+      } else {
+        // جدول وجود دارد اما خالی است، برندهای پیش‌فرض را اضافه کن
+        const brandsData = defaultBrandsList.map(name => ({
+          name,
+          description: `برند ${name}`
+        }));
+
+        const { error: insertError } = await supabase
+          .from("brands")
+          .insert(brandsData);
+
+        if (!insertError) {
+          setDefaultBrands(defaultBrandsList);
+        } else {
+          console.error("Error inserting default brands:", insertError);
+          setDefaultBrands(defaultBrandsList);
+        }
+      }
+    } catch (error) {
+      console.error("Error initializing brands:", error);
+      // در صورت خطا، حداقل در state محلی نمایش بده
+      setDefaultBrands(defaultBrandsList);
+    }
+  };
+
+    // راه‌اندازی دسته‌بندی‌های پیش‌فرض
+  const initializeDefaultCategories = async () => {
+    const defaultCategoriesList = [
+      "دیسکی", "کمپوزیتی", "سرامیکی", "فلزی", "پلاستیکی"
+    ];
+
+    try {
+      // ابتدا سعی کن از جدول categories بخوانی
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*');
+
+      if (error) {
+        console.log("Categories table doesn't exist, using local state");
+        // جدول وجود ندارد، از state محلی استفاده کن
+        setDefaultCategories(defaultCategoriesList);
+          return;
+        }
+
+      if (data && data.length > 0) {
+        // جدول وجود دارد و داده دارد
+        setDefaultCategories(data.map(category => category.name));
+      } else {
+        // جدول وجود دارد اما خالی است، دسته‌بندی‌های پیش‌فرض را اضافه کن
+        const categoriesData = defaultCategoriesList.map(name => ({
+          name,
+          description: `دسته‌بندی ${name}`
+        }));
+
+        const { error: insertError } = await supabase
+          .from("categories")
+          .insert(categoriesData);
+
+        if (!insertError) {
+          setDefaultCategories(defaultCategoriesList);
+        } else {
+          console.error("Error inserting default categories:", insertError);
+          setDefaultCategories(defaultCategoriesList);
+        }
+      }
+    } catch (error) {
+      console.error("Error initializing categories:", error);
+      // در صورت خطا، حداقل در state محلی نمایش بده
+      setDefaultCategories(defaultCategoriesList);
+    }
+  };
+
+  // توابع مربوط به آپلود عکس
+  const handleImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      // بررسی نوع فایل
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        alert('لطفاً فقط فایل تصویری انتخاب کنید. فرمت‌های مجاز: JPG, PNG, GIF, WebP');
+        return;
+      }
+      
+      // بررسی اندازه فایل (حداکثر 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('حجم فایل نباید بیشتر از 5 مگابایت باشد');
+        return;
+      }
+
+      setSelectedImage(file);
+      
+      // نمایش preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const clearImageSelection = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+    setNewProduct({...newProduct, image: ""});
+  };
+
+  const uploadImageToStorage = async (productId) => {
+    if (!selectedImage) return null;
+    
+    try {
+      setUploadingImage(true);
+      const imageUrl = await uploadProductImage(selectedImage, productId);
+      return imageUrl;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('خطا در آپلود عکس: ' + error.message);
+      return null;
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  // افزودن محصول جدید - کامل
   const handleAddProduct = async () => {
     try {
-      setUploadingImages(true);
+      setAddingProduct(true);
       
-      // آپلود عکس‌ها
-      let imageUrls = [];
-      if (imageFiles.length > 0) {
-        try {
-          for (let i = 0; i < imageFiles.length; i++) {
-            const file = imageFiles[i];
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${Math.random()}.${fileExt}`;
-            const filePath = `product-images/${fileName}`;
-
-                         const { error: uploadError } = await supabase.storage
-               .from('products') // نام bucket که ساختی
-               .upload(filePath, file);
-
-             if (uploadError) {
-               console.error("Storage upload error:", uploadError);
-               throw new Error(`خطا در آپلود عکس: ${uploadError.message}`);
-             }
-
-             const { data: { publicUrl } } = supabase.storage
-               .from('products') // نام bucket که ساختی
-               .getPublicUrl(filePath);
-
-            imageUrls.push(publicUrl);
-          }
-        } catch (storageError) {
-          console.error("Storage error:", storageError);
-          alert(`خطا در آپلود عکس‌ها: ${storageError.message}\n\nلطفاً مطمئن شوید که bucket storage در Supabase ایجاد شده است.`);
-          setUploadingImages(false);
+      // ابتدا عکس را آپلود کن (اگر انتخاب شده باشد)
+      let imageUrl = "";
+      if (selectedImage) {
+        // ایجاد یک ID موقت برای آپلود عکس
+        const tempId = Date.now();
+        imageUrl = await uploadImageToStorage(tempId);
+        if (!imageUrl) {
+          alert('خطا در آپلود عکس. لطفاً دوباره تلاش کنید.');
           return;
         }
       }
+      
+      // آماده‌سازی داده‌های محصول
+      const productData = {
+        name: newProduct.name,
+        price: newProduct.price,
+        originalPrice: newProduct.originalPrice || newProduct.price,
+        brand: newProduct.brand,
+        category: newProduct.category,
+        vehicleType: newProduct.vehicleType, // اضافه کردن نوع خودرو
+        suitableFor: newProduct.suitableFor,
+        stockStatus: newProduct.stockStatus,
+        stockCount: parseInt(newProduct.stockCount) || 0,
+        description: newProduct.description,
+        image: imageUrl, // استفاده از URL عکس آپلود شده
+        specifications: {
+          material: newProduct.material,
+          thickness: newProduct.thickness,
+          weight: newProduct.weight,
+          temperature: newProduct.temperature,
+          warranty: newProduct.warranty
+        },
+        features: newProduct.features.filter(f => f.trim() !== ""),
+        reviews: [{
+          id: Date.now(),
+          user: newProduct.reviewUser,
+          rating: parseInt(newProduct.reviewRating),
+          comment: newProduct.reviewComment,
+          date: newProduct.reviewDate || new Date().toLocaleDateString('fa-IR')
+        }],
+        created_at: new Date().toISOString()
+      };
 
-      // افزودن محصول با عکس‌ها
-      const { error } = await supabase
+      // افزودن به دیتابیس
+      const { data, error } = await supabase
         .from("products")
-        .insert([{
-          ...newProduct,
-          price: parseFloat(newProduct.price),
-          stock: parseInt(newProduct.stock),
-          images: imageUrls,
-          created_at: new Date().toISOString()
-        }]);
+        .insert([productData]);
 
       if (error) throw error;
       
+      // اگر عکس آپلود شده، نام فایل را با ID واقعی محصول آپدیت کن
+      if (imageUrl && data && data[0]) {
+        const realProductId = data[0].id;
+        // اینجا می‌توانیم نام فایل را تغییر دهیم اگر نیاز باشد
+        // فعلاً همان URL قبلی استفاده می‌شود
+      }
+      
+      // پاک کردن فرم
       setNewProduct({
         name: "",
-        description: "",
         price: "",
-        category: "",
+        originalPrice: "",
         brand: "",
-        stock: "",
-        images: [],
-        specifications: {},
+        category: "",
+        vehicleType: "", // پاک کردن نوع خودرو
+        suitableFor: "",
+        stockStatus: "موجود",
+        stockCount: "",
+        description: "",
+        material: "",
+        thickness: "",
+        weight: "",
+        temperature: "",
+        warranty: "",
+        features: [""],
+        reviewUser: "",
+        reviewRating: 5,
+        reviewComment: "",
+        reviewDate: "",
+        image: "" // پاک کردن عکس فرم
       });
-      setImageFiles([]);
+      
+      // پاک کردن انتخاب عکس
+      clearImageSelection();
+      
       setShowAddForm(false);
-      fetchProducts();
-      fetchStats();
+      
+      // بروزرسانی لیست (realtime)
+      await fetchProducts();
+      
+      alert("محصول با موفقیت اضافه شد!");
     } catch (error) {
       console.error("Error adding product:", error);
-      alert("خطا در افزودن محصول");
+      alert("خطا در افزودن محصول: " + error.message);
     } finally {
-      setUploadingImages(false);
+      setAddingProduct(false);
     }
   };
 
-  const handleEditProduct = async (productId, updatedData) => {
+  // ویرایش محصول
+  const handleEditProduct = (product) => {
+    setEditingProduct(product);
+    setNewProduct({
+      name: product.name || "",
+      price: product.price || "",
+      originalPrice: product.originalPrice || "",
+      brand: product.brand || "",
+      category: product.category || "",
+      vehicleType: product.vehicleType || "", // اضافه کردن نوع خودرو
+      suitableFor: product.suitableFor || "",
+      stockStatus: product.stockStatus || "موجود",
+      stockCount: product.stockCount || "",
+      description: product.description || "",
+      material: product.specifications?.material || "",
+      thickness: product.specifications?.thickness || "",
+      weight: product.specifications?.weight || "",
+      temperature: product.specifications?.temperature || "",
+      warranty: product.specifications?.warranty || "",
+      features: product.features && product.features.length > 0 ? product.features : [""],
+      reviewUser: product.reviews && product.reviews.length > 0 ? product.reviews[0].user : "",
+      reviewRating: product.reviews && product.reviews.length > 0 ? product.reviews[0].rating : 5,
+      reviewComment: product.reviews && product.reviews.length > 0 ? product.reviews[0].comment : "",
+      reviewDate: product.reviews && product.reviews.length > 0 ? product.reviews[0].date : "",
+      image: product.image || "" // ذخیره عکس محصول ویرایش شده
+    });
+    
+    // نمایش عکس موجود در preview
+    if (product.image) {
+      setImagePreview(product.image);
+    } else {
+      setImagePreview(null);
+    }
+    
+    // پاک کردن انتخاب عکس جدید
+    setSelectedImage(null);
+    
+    setShowAddForm(true);
+  };
+
+  // بروزرسانی محصول
+  const handleUpdateProduct = async () => {
     try {
+      setAddingProduct(true);
+      
+      let imageUrl = editingProduct.image; // استفاده از عکس موجود
+      
+      // اگر عکس جدید انتخاب شده، آن را آپلود کن
+      if (selectedImage) {
+        const newImageUrl = await uploadImageToStorage(editingProduct.id);
+        if (newImageUrl) {
+          imageUrl = newImageUrl;
+          
+          // حذف عکس قدیمی (اگر وجود داشته باشد)
+          if (editingProduct.image) {
+            await deleteProductImage(editingProduct.image);
+          }
+        } else {
+          alert('خطا در آپلود عکس جدید. لطفاً دوباره تلاش کنید.');
+          return;
+        }
+      }
+      
+      const productData = {
+        name: newProduct.name,
+        price: newProduct.price,
+        originalPrice: newProduct.originalPrice || newProduct.price,
+        brand: newProduct.brand,
+        category: newProduct.category,
+        vehicleType: newProduct.vehicleType, // اضافه کردن نوع خودرو
+        suitableFor: newProduct.suitableFor,
+        stockStatus: newProduct.stockStatus,
+        stockCount: parseInt(newProduct.stockCount) || 0,
+        description: newProduct.description,
+        image: imageUrl, // استفاده از عکس جدید یا موجود
+        specifications: {
+          material: newProduct.material,
+          thickness: newProduct.thickness,
+          weight: newProduct.weight,
+          temperature: newProduct.temperature,
+          warranty: newProduct.warranty
+        },
+        features: newProduct.features.filter(f => f.trim() !== ""),
+        reviews: [{
+          id: Date.now(),
+          user: newProduct.reviewUser,
+          rating: parseInt(newProduct.reviewRating),
+          comment: newProduct.reviewComment,
+          date: newProduct.reviewDate || new Date().toLocaleDateString('fa-IR')
+        }],
+        updated_at: new Date().toISOString()
+      };
+
       const { error } = await supabase
         .from("products")
-        .update({
-          ...updatedData,
-          price: parseFloat(updatedData.price),
-          stock: parseInt(updatedData.stock),
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", productId);
+        .update(productData)
+        .eq("id", editingProduct.id);
 
       if (error) throw error;
       
+      // پاک کردن فرم و حالت ویرایش
+      setNewProduct({
+        name: "",
+        price: "",
+        originalPrice: "",
+        brand: "",
+        category: "",
+        vehicleType: "", // پاک کردن نوع خودرو
+        suitableFor: "",
+        stockStatus: "موجود",
+        stockCount: "",
+        description: "",
+        material: "",
+        thickness: "",
+        weight: "",
+        temperature: "",
+        warranty: "",
+        features: [""],
+        reviewUser: "",
+        reviewRating: 5,
+        reviewComment: "",
+        reviewDate: "",
+        image: "" // پاک کردن عکس فرم ویرایش شده
+      });
+      
+      // پاک کردن انتخاب عکس
+      clearImageSelection();
+      
       setEditingProduct(null);
-      fetchProducts();
-      fetchStats();
+      setShowAddForm(false);
+      
+      await fetchProducts();
+      alert("محصول با موفقیت بروزرسانی شد!");
     } catch (error) {
       console.error("Error updating product:", error);
-      alert("خطا در بروزرسانی محصول");
+      alert("خطا در بروزرسانی محصول: " + error.message);
+    } finally {
+      setAddingProduct(false);
     }
   };
 
+  // حذف محصول
   const handleDeleteProduct = async (productId) => {
-    if (window.confirm("آیا از حذف این محصول اطمینان دارید؟")) {
       try {
+      setDeletingProduct(true);
+      
+      // ابتدا عکس محصول را از storage حذف کن
+      const productToDelete = products.find(p => p.id === productId);
+      if (productToDelete && productToDelete.image) {
+        await deleteProductImage(productToDelete.image);
+      }
+      
         const { error } = await supabase
           .from("products")
           .delete()
@@ -173,23 +579,268 @@ const AdminPanel = () => {
 
         if (error) throw error;
         
-        fetchProducts();
-        fetchStats();
+      await fetchProducts();
+      alert("محصول با موفقیت حذف شد!");
       } catch (error) {
         console.error("Error deleting product:", error);
-        alert("خطا در حذف محصول");
-      }
+      alert("خطا در حذف محصول: " + error.message);
+    } finally {
+      setDeletingProduct(false);
+      setShowDeleteConfirm(null);
     }
   };
 
+  // خروج از سیستم
+  const handleLogout = () => {
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUser');
+    navigate('/login');
+  };
+
+  // ===== مدیریت برندها =====
+  const handleAddBrand = async () => {
+    try {
+      setAddingBrand(true);
+      
+      if (!newBrand.name.trim()) {
+        alert("نام برند الزامی است!");
+        return;
+      }
+
+      // بررسی تکراری نبودن نام برند
+      if (defaultBrands.includes(newBrand.name.trim())) {
+        alert("این برند قبلاً وجود دارد!");
+        return;
+      }
+
+      // اضافه کردن به دیتابیس
+      const { error } = await supabase
+        .from("brands")
+        .insert([{
+          name: newBrand.name.trim(),
+          description: newBrand.description || `برند ${newBrand.name.trim()}`
+        }]);
+
+      if (error) {
+        // اگر خطا مربوط به عدم وجود جدول است، ابتدا جدول را ایجاد کن
+        if (error.code === '42P01') {
+          console.log("Brands table doesn't exist, creating it first...");
+          
+          // ابتدا برند را به state محلی اضافه کن
+          setDefaultBrands([...defaultBrands, newBrand.name.trim()]);
+          setNewBrand({ name: "", description: "" });
+          setShowAddBrandForm(false);
+          alert("برند به لیست محلی اضافه شد. لطفاً ابتدا جدول brands را در Supabase ایجاد کنید.");
+          return;
+        }
+        throw error;
+      }
+
+      // بروزرسانی state
+      setDefaultBrands([...defaultBrands, newBrand.name.trim()]);
+      
+      setNewBrand({ name: "", description: "" });
+      setShowAddBrandForm(false);
+      alert("برند با موفقیت اضافه شد!");
+    } catch (error) {
+      console.error("Error adding brand:", error);
+      alert("خطا در افزودن برند: " + error.message);
+    } finally {
+      setAddingBrand(false);
+    }
+  };
+
+  const handleEditBrand = (brand, index) => {
+    setEditingBrand({ ...brand, index });
+    setNewBrand({ name: brand, description: "" });
+    setShowAddBrandForm(true);
+  };
+
+  const handleUpdateBrand = async () => {
+    try {
+      setAddingBrand(true);
+      
+      if (!newBrand.name.trim()) {
+        alert("نام برند الزامی است!");
+        return;
+      }
+
+      // بروزرسانی در دیتابیس
+      const { error } = await supabase
+        .from("brands")
+        .update({
+          name: newBrand.name.trim(),
+          description: newBrand.description || `برند ${newBrand.name.trim()}`
+        })
+        .eq("name", editingBrand.brand);
+
+      if (error) throw error;
+
+      // بروزرسانی در state
+      const updatedBrands = [...defaultBrands];
+      updatedBrands[editingBrand.index] = newBrand.name.trim();
+      setDefaultBrands(updatedBrands);
+      
+      setNewBrand({ name: "", description: "" });
+      setEditingBrand(null);
+      setShowAddBrandForm(false);
+      alert("برند با موفقیت بروزرسانی شد!");
+    } catch (error) {
+      console.error("Error updating brand:", error);
+      alert("خطا در بروزرسانی برند: " + error.message);
+    } finally {
+      setAddingBrand(false);
+    }
+  };
+
+  const handleDeleteBrand = async (brand, index) => {
+    try {
+      setDeletingBrand(true);
+      
+      // حذف از دیتابیس
+      const { error } = await supabase
+        .from("brands")
+        .delete()
+        .eq("name", brand);
+
+      if (error) throw error;
+
+      // حذف از state
+      const updatedBrands = defaultBrands.filter((_, i) => i !== index);
+      setDefaultBrands(updatedBrands);
+      
+      setShowDeleteBrandConfirm(null);
+      alert("برند با موفقیت حذف شد!");
+    } catch (error) {
+      console.error("Error deleting brand:", error);
+      alert("خطا در حذف برند: " + error.message);
+    } finally {
+      setDeletingBrand(false);
+    }
+  };
+
+  // ===== مدیریت دسته‌بندی‌ها =====
+  const handleAddCategory = async () => {
+    try {
+      setAddingCategory(true);
+      
+      if (!newCategory.name.trim()) {
+        alert("نام دسته‌بندی الزامی است!");
+        return;
+      }
+
+      // بررسی تکراری نبودن نام دسته‌بندی
+      if (defaultCategories.includes(newCategory.name.trim())) {
+        alert("این دسته‌بندی قبلاً وجود دارد!");
+        return;
+      }
+
+      // اضافه کردن به دیتابیس
+      const { error } = await supabase
+        .from("categories")
+        .insert([{
+          name: newCategory.name.trim(),
+          description: newCategory.description || `دسته‌بندی ${newCategory.name.trim()}`
+        }]);
+
+      if (error) throw error;
+
+      // اضافه کردن به state
+      setDefaultCategories([...defaultCategories, newCategory.name.trim()]);
+      
+      setNewCategory({ name: "", description: "" });
+      setShowAddCategoryForm(false);
+      alert("دسته‌بندی با موفقیت اضافه شد!");
+    } catch (error) {
+      console.error("Error adding category:", error);
+      alert("خطا در افزودن دسته‌بندی: " + error.message);
+    } finally {
+      setAddingCategory(false);
+    }
+  };
+
+  const handleEditCategory = (category, index) => {
+    setEditingCategory({ ...category, index });
+    setNewCategory({ name: category, description: "" });
+    setShowAddCategoryForm(true);
+  };
+
+  const handleUpdateCategory = async () => {
+    try {
+      setAddingCategory(true);
+      
+      if (!newCategory.name.trim()) {
+        alert("نام دسته‌بندی الزامی است!");
+        return;
+      }
+
+      // بروزرسانی در دیتابیس
+      const { error } = await supabase
+        .from("categories")
+        .update({
+          name: newCategory.name.trim(),
+          description: newCategory.description || `دسته‌بندی ${newCategory.name.trim()}`
+        })
+        .eq("name", editingCategory.category);
+
+      if (error) throw error;
+
+      // بروزرسانی در state
+      const updatedCategories = [...defaultCategories];
+      updatedCategories[editingCategory.index] = newCategory.name.trim();
+      setDefaultCategories(updatedCategories);
+      
+      setNewCategory({ name: "", description: "" });
+      setEditingCategory(null);
+      setShowAddCategoryForm(false);
+      alert("دسته‌بندی با موفقیت بروزرسانی شد!");
+    } catch (error) {
+      console.error("Error updating category:", error);
+      console.error("Error updating category:", error);
+      alert("خطا در بروزرسانی دسته‌بندی: " + error.message);
+    } finally {
+      setAddingCategory(false);
+    }
+  };
+
+  const handleDeleteCategory = async (category, index) => {
+    try {
+      setDeletingCategory(true);
+      
+      // حذف از دیتابیس
+      const { error } = await supabase
+        .from("categories")
+        .delete()
+        .eq("name", category);
+
+      if (error) throw error;
+
+      // حذف از state
+      const updatedCategories = defaultCategories.filter((_, i) => i !== index);
+      setDefaultCategories(updatedCategories);
+      
+      setShowDeleteCategoryConfirm(null);
+      alert("دسته‌بندی با موفقیت حذف شد!");
+    } catch (error) {
+      console.error("Error deleting category:", error);
+      alert("خطا در حذف دسته‌بندی: " + error.message);
+    } finally {
+      setDeletingCategory(false);
+    }
+  };
+
+  // فیلتر کردن محصولات
   const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.brand?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesBrand = !selectedBrand || product.brand === selectedBrand;
     const matchesCategory = !selectedCategory || product.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    return matchesSearch && matchesBrand && matchesCategory;
   });
 
-  const categories = [...new Set(products.map(p => p.category))];
+  const productBrands = [...new Set(products.map(p => p.brand).filter(Boolean))];
+  const productCategories = [...new Set(products.map(p => p.category).filter(Boolean))];
 
   if (loading) return (
     <div className="flex items-center justify-center min-h-screen">
@@ -198,59 +849,55 @@ const AdminPanel = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">پنل ادمین</h1>
-          <p className="text-gray-600">مدیریت محصولات و سیستم</p>
+             <div className="bg-white shadow-sm border-b">
+         <div className="w-full px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">پنل ادمین</h1>
+              <p className="text-sm text-gray-600">مدیریت محصولات لنت شاپ</p>
         </div>
-
-        {/* Statistics Dashboard */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center">
-              <div className="p-3 rounded-full bg-blue-100 text-blue-600">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">کل محصولات</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.totalProducts}</p>
+            <button
+              onClick={handleLogout}
+              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+            >
+              خروج
+            </button>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center">
-              <div className="p-3 rounded-full bg-green-100 text-green-600">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">دسته‌بندی‌ها</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.totalCategories}</p>
-              </div>
+             <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
+         {/* Tab Navigation */}
+         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+           <div className="flex space-x-1 space-x-reverse">
+             <button
+               onClick={() => setActiveTab('products')}
+               className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                 activeTab === 'products'
+                   ? 'bg-blue-600 text-white'
+                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+               }`}
+             >
+               مدیریت محصولات
+             </button>
+             <button
+               onClick={() => setActiveTab('brands')}
+               className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                 activeTab === 'brands'
+                   ? 'bg-blue-600 text-white'
+                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+               }`}
+             >
+               مدیریت برندها و دسته‌بندی‌ها
+             </button>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center">
-              <div className="p-3 rounded-full bg-red-100 text-red-600">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">موجودی کم</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.lowStock}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
+                  {/* Conditional Content Based on Active Tab */}
+         {activeTab === 'products' ? (
+           <>
         {/* Search and Filters */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex flex-col md:flex-row gap-4">
@@ -260,17 +907,29 @@ const AdminPanel = () => {
                 placeholder="جستجو در محصولات..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                     className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right"
               />
             </div>
+                 <div className="md:w-48">
+                   <select
+                     value={selectedBrand}
+                     onChange={(e) => setSelectedBrand(e.target.value)}
+                     className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right"
+                   >
+                     <option value="">همه برندها</option>
+                                           {productBrands.map(brand => (
+                        <option key={brand} value={brand}>{brand}</option>
+                      ))}
+                   </select>
+                 </div>
             <div className="md:w-48">
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                     className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right"
               >
                 <option value="">همه دسته‌ها</option>
-                {categories.map(category => (
+                                           {productCategories.map(category => (
                   <option key={category} value={category}>{category}</option>
                 ))}
               </select>
@@ -279,192 +938,610 @@ const AdminPanel = () => {
               onClick={() => setShowAddForm(true)}
               className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
             >
-              + افزودن محصول جدید
+                   + افزودن محصول
             </button>
           </div>
         </div>
+           </>
+         ) : (
+           <>
+                           {/* Brands and Categories Management */}
+              <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+                <h2 className="text-xl font-bold text-gray-800 mb-4 text-right">مدیریت برندها و دسته‌بندی‌ها</h2>
+                
+                
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                   {/* Brands Management */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-gray-700 mb-3 text-right">برندها</h3>
+                    <div className="space-y-2">
+                      {defaultBrands.map((brand, index) => (
+                        <div key={index} className="flex items-center justify-between bg-white p-2 rounded">
+                          <span className="text-gray-800">{brand}</span>
+                          <div className="flex gap-1">
+                            <button 
+                              onClick={() => handleEditBrand(brand, index)}
+                              className="bg-blue-100 text-blue-600 px-2 py-1 rounded text-sm hover:bg-blue-200"
+                            >
+                              ویرایش
+                            </button>
+                            <button 
+                              onClick={() => setShowDeleteBrandConfirm({ brand, index })}
+                              className="bg-red-100 text-red-600 px-2 py-1 rounded text-sm hover:bg-red-200"
+                            >
+                              حذف
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <button 
+                      onClick={() => setShowAddBrandForm(true)}
+                      className="w-full mt-3 bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition-colors"
+                    >
+                      + افزودن برند جدید
+                    </button>
+                  </div>
+                  
+                  {/* Categories Management */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-gray-700 mb-3 text-right">دسته‌بندی‌ها</h3>
+                    <div className="space-y-2">
+                      {defaultCategories.map((category, index) => (
+                        <div key={index} className="flex items-center justify-between bg-white p-2 rounded">
+                          <span className="text-gray-800">{category}</span>
+                          <div className="flex gap-1">
+                            <button 
+                              onClick={() => handleEditCategory(category, index)}
+                              className="bg-blue-100 text-blue-600 px-2 py-1 rounded text-sm hover:bg-blue-200"
+                            >
+                              ویرایش
+                            </button>
+                            <button 
+                              onClick={() => setShowDeleteCategoryConfirm({ category, index })}
+                              className="bg-red-100 text-red-600 px-2 py-1 rounded text-sm hover:bg-red-200"
+                            >
+                              حذف
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <button 
+                      onClick={() => setShowAddCategoryForm(true)}
+                      className="w-full mt-3 bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition-colors"
+                    >
+                      + افزودن دسته‌بندی جدید
+                    </button>
+                  </div>
+               </div>
+                           </div>
 
-        {/* Add/Edit Product Form */}
-        {(showAddForm || editingProduct) && (
+              {/* فرم افزودن/ویرایش برند */}
+              {showAddBrandForm && (
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <h2 className="text-xl font-bold mb-4">
-              {editingProduct ? "ویرایش محصول" : "افزودن محصول جدید"}
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-bold text-right">
+                      {editingBrand ? 'ویرایش برند' : 'افزودن برند جدید'}
             </h2>
+                    <button
+                      onClick={() => {
+                        setShowAddBrandForm(false);
+                        setEditingBrand(null);
+                        setNewBrand({ name: "", description: "" });
+                      }}
+                      className="text-gray-500 hover:text-gray-700 text-2xl"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    <input
+                      type="text"
+                      placeholder="نام برند"
+                      value={newBrand.name}
+                      onChange={(e) => setNewBrand({...newBrand, name: e.target.value})}
+                      className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right w-full"
+                    />
+
+                    <textarea
+                      placeholder="توضیحات برند (اختیاری)"
+                      value={newBrand.description}
+                      onChange={(e) => setNewBrand({...newBrand, description: e.target.value})}
+                      className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right w-full"
+                      rows="3"
+                    />
+                  </div>
+
+                  <div className="mt-6 flex gap-2 justify-end">
+                    {editingBrand ? (
+                      <button
+                        onClick={handleUpdateBrand}
+                        disabled={addingBrand}
+                        className={`px-6 py-2 rounded-lg transition-colors ${
+                          addingBrand 
+                            ? 'bg-gray-400 cursor-not-allowed' 
+                            : 'bg-green-600 hover:bg-green-700'
+                        } text-white`}
+                      >
+                        {addingBrand ? "در حال بروزرسانی..." : "بروزرسانی برند"}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleAddBrand}
+                        disabled={addingBrand}
+                        className={`px-6 py-2 rounded-lg transition-colors ${
+                          addingBrand 
+                            ? 'bg-gray-400 cursor-not-allowed' 
+                            : 'bg-blue-600 hover:bg-blue-700'
+                        } text-white`}
+                      >
+                        {addingBrand ? "در حال ذخیره..." : "افزودن برند"}
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => {
+                        setShowAddBrandForm(false);
+                        setEditingBrand(null);
+                        setNewBrand({ name: "", description: "" });
+                      }}
+                      className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+                    >
+                      انصراف
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* فرم افزودن/ویرایش دسته‌بندی */}
+              {showAddCategoryForm && (
+                <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-bold text-right">
+                      {editingCategory ? 'ویرایش دسته‌بندی' : 'افزودن دسته‌بندی جدید'}
+                    </h2>
+                    <button
+                      onClick={() => {
+                        setShowAddCategoryForm(false);
+                        setEditingCategory(null);
+                        setNewCategory({ name: "", description: "" });
+                      }}
+                      className="text-gray-500 hover:text-gray-700 text-2xl"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    <input
+                      type="text"
+                      placeholder="نام دسته‌بندی"
+                      value={newCategory.name}
+                      onChange={(e) => setNewCategory({...newCategory, name: e.target.value})}
+                      className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right w-full"
+                    />
+
+                    <textarea
+                      placeholder="توضیحات دسته‌بندی (اختیاری)"
+                      value={newCategory.description}
+                      onChange={(e) => setNewCategory({...newCategory, description: e.target.value})}
+                      className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right w-full"
+                      rows="3"
+                    />
+                  </div>
+
+                  <div className="mt-6 flex gap-2 justify-end">
+                    {editingCategory ? (
+                      <button
+                        onClick={handleUpdateCategory}
+                        disabled={addingCategory}
+                        className={`px-6 py-2 rounded-lg transition-colors ${
+                          addingCategory 
+                            ? 'bg-gray-400 cursor-not-allowed' 
+                            : 'bg-green-600 hover:bg-green-700'
+                        } text-white`}
+                      >
+                        {addingCategory ? "در حال بروزرسانی..." : "بروزرسانی دسته‌بندی"}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleAddCategory}
+                        disabled={addingCategory}
+                        className={`px-6 py-2 rounded-lg transition-colors ${
+                          addingCategory 
+                            ? 'bg-gray-400 cursor-not-allowed' 
+                            : 'bg-blue-600 hover:bg-blue-700'
+                        } text-white`}
+                      >
+                        {addingCategory ? "در حال ذخیره..." : "افزودن دسته‌بندی"}
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => {
+                        setShowAddCategoryForm(false);
+                        setEditingCategory(null);
+                        setNewCategory({ name: "", description: "" });
+                      }}
+                      className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+                    >
+                      انصراف
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+                 {/* Add/Edit Product Form - کامل */}
+         {activeTab === 'products' && showAddForm && (
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-right">
+                {editingProduct ? 'ویرایش محصول' : 'افزودن محصول جدید'}
+              </h2>
+              <button
+                onClick={() => {
+                  setShowAddForm(false);
+                  setEditingProduct(null);
+                  setNewProduct({
+                    name: "",
+                    price: "",
+                    originalPrice: "",
+                    brand: "",
+                    category: "",
+                    vehicleType: "", // پاک کردن نوع خودرو
+                    suitableFor: "",
+                    stockStatus: "موجود",
+                    stockCount: "",
+                    description: "",
+                    material: "",
+                    thickness: "",
+                    weight: "",
+                    temperature: "",
+                    warranty: "",
+                    features: [""],
+                    reviewUser: "",
+                    reviewRating: 5,
+                    reviewComment: "",
+                    reviewDate: "",
+                    image: "" // پاک کردن عکس فرم جدید
+                  });
+                }}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* اطلاعات اصلی */}
+              <div className="space-y-4">
               <input
                 type="text"
                 placeholder="نام محصول"
-                value={editingProduct ? editingProduct.name : newProduct.name}
-                onChange={(e) => {
-                  if (editingProduct) {
-                    setEditingProduct({ ...editingProduct, name: e.target.value });
-                  } else {
-                    setNewProduct({ ...newProduct, name: e.target.value });
-                  }
-                }}
-                className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  value={newProduct.name}
+                  onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
+                  className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right"
               />
 
               <input
-                type="number"
+                  type="text"
                 placeholder="قیمت (تومان)"
-                value={editingProduct ? editingProduct.price : newProduct.price}
-                onChange={(e) => {
-                  if (editingProduct) {
-                    setEditingProduct({ ...editingProduct, price: e.target.value });
-                  } else {
-                    setNewProduct({ ...newProduct, price: e.target.value });
-                  }
-                }}
-                className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  value={newProduct.price}
+                  onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
+                  className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right"
               />
 
               <input
                 type="text"
-                placeholder="دسته‌بندی"
-                value={editingProduct ? editingProduct.category : newProduct.category}
-                onChange={(e) => {
-                  if (editingProduct) {
-                    setEditingProduct({ ...editingProduct, category: e.target.value });
-                  } else {
-                    setNewProduct({ ...newProduct, category: e.target.value });
-                  }
-                }}
-                className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+                  placeholder="قیمت اصلی (اختیاری)"
+                  value={newProduct.originalPrice}
+                  onChange={(e) => setNewProduct({...newProduct, originalPrice: e.target.value})}
+                  className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right"
+                />
+
+                <select
+                  value={newProduct.brand}
+                  onChange={(e) => setNewProduct({...newProduct, brand: e.target.value})}
+                  className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right"
+                >
+                  <option value="">انتخاب برند</option>
+                  <option value="تویوتا">تویوتا</option>
+                  <option value="هیوندای">هیوندای</option>
+                  <option value="نیسان">نیسان</option>
+                  <option value="کیا">کیا</option>
+                  <option value="لکسوس">لکسوس</option>
+                  <option value="جیلی">جیلی</option>
+                  <option value="مزدا">مزدا</option>
+                  <option value="ام‌جی">ام‌جی</option>
+                  <option value="میتسوبیشی">میتسوبیشی</option>
+                  <option value="فولکس‌واگن">فولکس‌واگن</option>
+                  <option value="سایپا">سایپا</option>
+                  <option value="سوزوکی">سوزوکی</option>
+                  <option value="رنو">رنو</option>
+                  <option value="پژو">پژو</option>
+                  <option value="ایران خودرو">ایران خودرو</option>
+                  <option value="فاو">فاو</option>
+                  <option value="جی‌ای‌سی">جی‌ای‌سی</option>
+                </select>
+
+                <select
+                  value={newProduct.category}
+                  onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
+                  className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right"
+                >
+                  <option value="">انتخاب دسته‌بندی</option>
+                  <option value="دیسکی">دیسکی</option>
+                  <option value="کفشکی">کفشکی</option>
+                  <option value="لنت ترمز جلو">لنت ترمز جلو</option>
+                  <option value="لنت ترمز عقب">لنت ترمز عقب</option>
+                </select>
+
+                <select
+                  value={newProduct.vehicleType}
+                  onChange={(e) => setNewProduct({...newProduct, vehicleType: e.target.value})}
+                  className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right"
+                >
+                  <option value="">انتخاب نوع خودرو</option>
+                  <option value="سواری">سواری</option>
+                  <option value="شاسی بلند">شاسی بلند</option>
+                  <option value="دیزل">دیزل</option>
+                </select>
 
               <input
                 type="text"
-                placeholder="برند"
-                value={editingProduct ? editingProduct.brand : newProduct.brand}
-                onChange={(e) => {
-                  if (editingProduct) {
-                    setEditingProduct({ ...editingProduct, brand: e.target.value });
-                  } else {
-                    setNewProduct({ ...newProduct, brand: e.target.value });
-                  }
-                }}
-                className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+                  placeholder="مناسب برای چه خودروهایی"
+                  value={newProduct.suitableFor}
+                  onChange={(e) => setNewProduct({...newProduct, suitableFor: e.target.value})}
+                  className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right"
+                />
 
+                                 <select
+                   value={newProduct.stockStatus}
+                   onChange={(e) => setNewProduct({...newProduct, stockStatus: e.target.value})}
+                   className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right"
+                 >
+                   <option value="موجود">موجود</option>
+                   <option value="اتمام موجودی">اتمام موجودی</option>
+                 </select>
+
+                 {newProduct.stockStatus === "موجود" && (
               <input
                 type="number"
-                placeholder="موجودی"
-                value={editingProduct ? editingProduct.stock : newProduct.stock}
-                onChange={(e) => {
-                  if (editingProduct) {
-                    setEditingProduct({ ...editingProduct, stock: e.target.value });
-                  } else {
-                    setNewProduct({ ...newProduct, stock: e.target.value });
-                  }
-                }}
-                className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                     placeholder="تعداد موجودی"
+                     value={newProduct.stockCount}
+                     onChange={(e) => setNewProduct({...newProduct, stockCount: e.target.value})}
+                     className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right"
+                   />
+                 )}
+            </div>
+
+              {/* مشخصات فنی */}
+              <div className="space-y-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2 text-right">مشخصات فنی محصول</label>
+                
+                <input
+                  type="text"
+                  placeholder="جنس لنت (مثل: کامپوزیت آلی، سرامیکی)"
+                  value={newProduct.material}
+                  onChange={(e) => setNewProduct({...newProduct, material: e.target.value})}
+                  className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right"
+                />
+
+                <input
+                  type="text"
+                  placeholder="ضخامت (مثل: 11.5 میلی‌متر)"
+                  value={newProduct.thickness}
+                  onChange={(e) => setNewProduct({...newProduct, thickness: e.target.value})}
+                  className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right"
+                />
+
+                <input
+                  type="text"
+                  placeholder="وزن (مثل: 400 گرم)"
+                  value={newProduct.weight}
+                  onChange={(e) => setNewProduct({...newProduct, weight: e.target.value})}
+                  className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right"
+                />
+
+                <input
+                  type="text"
+                  placeholder="دمای مقاوم (مثل: تا 350 درجه سانتیگراد)"
+                  value={newProduct.temperature}
+                  onChange={(e) => setNewProduct({...newProduct, temperature: e.target.value})}
+                  className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right"
+                />
+
+                <input
+                  type="text"
+                  placeholder="گارانتی (مثل: 15 ماه)"
+                  value={newProduct.warranty}
+                  onChange={(e) => setNewProduct({...newProduct, warranty: e.target.value})}
+                  className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right"
+                />
+              </div>
+            </div>
+
+            {/* توضیحات */}
+            <div className="mt-4">
+            <textarea
+              placeholder="توضیحات محصول"
+                value={newProduct.description}
+                onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
+                className="border border-gray-300 rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right"
+              rows="3"
+            />
+            </div>
+
+            {/* ویژگی‌ها */}
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2 text-right">ویژگی‌های محصول</label>
+              {newProduct.features.map((feature, index) => (
+                <div key={index} className="flex gap-2 mb-2">
+                <input
+                    type="text"
+                    placeholder={`ویژگی ${index + 1}`}
+                    value={feature}
+                  onChange={(e) => {
+                      const newFeatures = [...newProduct.features];
+                      newFeatures[index] = e.target.value;
+                      setNewProduct({...newProduct, features: newFeatures});
+                    }}
+                    className="flex-1 border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right"
+                  />
+                  {newProduct.features.length > 1 && (
+                        <button
+                          onClick={() => {
+                        const newFeatures = newProduct.features.filter((_, i) => i !== index);
+                        setNewProduct({...newProduct, features: newFeatures});
+                          }}
+                      className="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600"
+                        >
+                      حذف
+                        </button>
+                  )}
+                      </div>
+                    ))}
+              <button
+                onClick={() => setNewProduct({...newProduct, features: [...newProduct.features, ""]})}
+                className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 text-sm"
+              >
+                + افزودن ویژگی
+              </button>
+                  </div>
+
+            {/* نظرات */}
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input
+                type="text"
+                placeholder="نام کاربر"
+                value={newProduct.reviewUser}
+                onChange={(e) => setNewProduct({...newProduct, reviewUser: e.target.value})}
+                className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right"
+              />
+
+              <select
+                value={newProduct.reviewRating}
+                onChange={(e) => setNewProduct({...newProduct, reviewRating: e.target.value})}
+                className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right"
+              >
+                <option value="5">5 ستاره</option>
+                <option value="4">4 ستاره</option>
+                <option value="3">3 ستاره</option>
+                <option value="2">2 ستاره</option>
+                <option value="1">1 ستاره</option>
+              </select>
+
+              <input
+                type="text"
+                placeholder="نظر کاربر"
+                value={newProduct.reviewComment}
+                onChange={(e) => setNewProduct({...newProduct, reviewComment: e.target.value})}
+                className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right"
+              />
+
+              <input
+                type="text"
+                placeholder="تاریخ نظر (اختیاری)"
+                value={newProduct.reviewDate}
+                onChange={(e) => setNewProduct({...newProduct, reviewDate: e.target.value})}
+                className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right"
               />
             </div>
 
-            <textarea
-              placeholder="توضیحات محصول"
-              value={editingProduct ? editingProduct.description : newProduct.description}
-              onChange={(e) => {
-                if (editingProduct) {
-                  setEditingProduct({ ...editingProduct, description: e.target.value });
-                } else {
-                  setNewProduct({ ...newProduct, description: e.target.value });
-                }
-              }}
-              className="border border-gray-300 rounded-lg p-3 w-full mt-4 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              rows="3"
-            />
-
-            {/* Image Upload Section */}
+            {/* آپلود عکس */}
             <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                عکس‌های محصول
-              </label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={(e) => {
-                    const files = Array.from(e.target.files);
-                    setImageFiles(files);
-                  }}
-                  className="hidden"
-                  id="image-upload"
-                />
-                <label
-                  htmlFor="image-upload"
-                  className="cursor-pointer inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  انتخاب عکس‌ها
-                </label>
-                <p className="mt-2 text-sm text-gray-500">
-                  می‌توانید چندین عکس انتخاب کنید
-                </p>
-              </div>
+              <label htmlFor="product-image" className="block text-sm font-medium text-gray-700 mb-2 text-right">عکس محصول (اختیاری)</label>
               
-              {/* Preview Selected Images */}
-              {imageFiles.length > 0 && (
-                <div className="mt-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">عکس‌های انتخاب شده:</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {imageFiles.map((file, index) => (
-                      <div key={index} className="relative">
-                        <img
-                          src={URL.createObjectURL(file)}
-                          alt={`Preview ${index + 1}`}
-                          className="w-full h-24 object-cover rounded-lg border"
-                        />
-                        <button
-                          onClick={() => {
-                            const newFiles = imageFiles.filter((_, i) => i !== index);
-                            setImageFiles(newFiles);
-                          }}
-                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
-                        >
-                          ×
-                        </button>
-                        <p className="text-xs text-gray-500 mt-1 truncate">{file.name}</p>
-                      </div>
-                    ))}
+              {/* نمایش عکس موجود یا انتخاب شده */}
+              {imagePreview && (
+                <div className="mb-4">
+                  <div className="relative inline-block">
+                    <img 
+                      src={imagePreview} 
+                      alt="Product Preview" 
+                      className="max-w-sm h-auto rounded-lg border-2 border-gray-200 shadow-sm" 
+                    />
+                    <button
+                      type="button"
+                      onClick={clearImageSelection}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors text-sm"
+                      title="حذف عکس"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <p className="text-sm text-gray-500 mt-2 text-center">عکس انتخاب شده</p>
+                </div>
+              )}
+              
+              {/* آپلود عکس جدید */}
+              {!imagePreview && (
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
+                  <input
+                    type="file"
+                    id="product-image"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                  <label 
+                    htmlFor="product-image" 
+                    className="cursor-pointer block"
+                  >
+                    <div className="text-gray-600">
+                      <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <p className="mt-2 text-sm text-gray-600">برای انتخاب عکس کلیک کنید</p>
+                      <p className="mt-1 text-xs text-gray-500">PNG, JPG, GIF, WebP تا 5MB</p>
+                    </div>
+                  </label>
+                </div>
+              )}
+              
+              {/* نمایش وضعیت آپلود */}
+              {uploadingImage && (
+                <div className="mt-2 text-center">
+                  <div className="inline-flex items-center text-sm text-blue-600">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                    در حال آپلود عکس...
                   </div>
                 </div>
               )}
             </div>
 
-            <div className="mt-4 flex gap-2">
+            {/* دکمه‌های عملیات */}
+            <div className="mt-6 flex gap-2 justify-end">
+              {editingProduct ? (
               <button
-                onClick={() => {
-                  if (editingProduct) {
-                    handleEditProduct(editingProduct.id, editingProduct);
-                  } else {
-                    handleAddProduct();
-                  }
-                }}
-                disabled={uploadingImages}
+                  onClick={handleUpdateProduct}
+                  disabled={addingProduct}
                 className={`px-6 py-2 rounded-lg transition-colors ${
-                  uploadingImages 
+                    addingProduct 
                     ? 'bg-gray-400 cursor-not-allowed' 
-                    : 'bg-blue-600 hover:bg-blue-700'
+                      : 'bg-green-600 hover:bg-green-700'
                 } text-white`}
               >
-                {uploadingImages ? (
-                  <span className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    در حال آپلود...
-                  </span>
-                ) : (
-                  editingProduct ? "بروزرسانی محصول" : "افزودن محصول"
-                )}
+                  {addingProduct ? "در حال بروزرسانی..." : "بروزرسانی محصول"}
+                </button>
+              ) : (
+                <button
+                  onClick={handleAddProduct}
+                  disabled={addingProduct}
+                  className={`px-6 py-2 rounded-lg transition-colors ${
+                    addingProduct 
+                      ? 'bg-gray-400 cursor-not-allowed' 
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  } text-white`}
+                >
+                  {addingProduct ? "در حال ذخیره..." : "افزودن محصول"}
               </button>
+              )}
 
               <button
                 onClick={() => {
@@ -472,15 +1549,27 @@ const AdminPanel = () => {
                   setEditingProduct(null);
                   setNewProduct({
                     name: "",
-                    description: "",
                     price: "",
-                    category: "",
+                    originalPrice: "",
                     brand: "",
-                    stock: "",
-                    images: [],
-                    specifications: {},
+                    category: "",
+                    vehicleType: "", // پاک کردن نوع خودرو
+                    suitableFor: "",
+                    stockStatus: "موجود",
+                    stockCount: "",
+                    description: "",
+                    material: "",
+                    thickness: "",
+                    weight: "",
+                    temperature: "",
+                    warranty: "",
+                    features: [""],
+                    reviewUser: "",
+                    reviewRating: 5,
+                    reviewComment: "",
+                    reviewDate: "",
+                    image: "" // پاک کردن عکس فرم جدید
                   });
-                  setImageFiles([]);
                 }}
                 className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors"
               >
@@ -490,10 +1579,104 @@ const AdminPanel = () => {
           </div>
         )}
 
+                          {/* Delete Confirmation Modal */}
+         {activeTab === 'products' && showDeleteConfirm && (
+           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+             <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+               <h3 className="text-lg font-semibold text-gray-800 mb-4 text-right">تأیید حذف</h3>
+               <p className="text-gray-600 mb-6 text-right">
+                 آیا از حذف این محصول اطمینان دارید؟ این عملیات قابل بازگشت نیست.
+               </p>
+               <div className="flex gap-3 justify-end">
+                 <button
+                   onClick={() => setShowDeleteConfirm(null)}
+                   className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+                 >
+                   انصراف
+                 </button>
+                 <button
+                   onClick={() => handleDeleteProduct(showDeleteConfirm)}
+                   disabled={deletingProduct}
+                   className={`px-4 py-2 rounded-lg transition-colors ${
+                     deletingProduct 
+                       ? 'bg-red-400 cursor-not-allowed' 
+                       : 'bg-red-600 hover:bg-red-700'
+                   } text-white`}
+                 >
+                   {deletingProduct ? "در حال حذف..." : "حذف"}
+                 </button>
+               </div>
+             </div>
+           </div>
+         )}
+
+         {/* Delete Brand Confirmation Modal */}
+         {showDeleteBrandConfirm && (
+           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+             <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+               <h3 className="text-lg font-semibold text-gray-800 mb-4 text-right">تأیید حذف برند</h3>
+               <p className="text-gray-600 mb-6 text-right">
+                 آیا از حذف برند "{showDeleteBrandConfirm.brand}" اطمینان دارید؟ این عملیات قابل بازگشت نیست.
+               </p>
+               <div className="flex gap-3 justify-end">
+                 <button
+                   onClick={() => setShowDeleteBrandConfirm(null)}
+                   className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+                 >
+                   انصراف
+                 </button>
+                 <button
+                   onClick={() => handleDeleteBrand(showDeleteBrandConfirm.brand, showDeleteBrandConfirm.index)}
+                   disabled={deletingBrand}
+                   className={`px-4 py-2 rounded-lg transition-colors ${
+                     deletingBrand 
+                       ? 'bg-red-400 cursor-not-allowed' 
+                       : 'bg-red-600 hover:bg-red-700'
+                   } text-white`}
+                 >
+                   {deletingBrand ? "در حال حذف..." : "حذف"}
+                 </button>
+               </div>
+             </div>
+           </div>
+         )}
+
+         {/* Delete Category Confirmation Modal */}
+         {showDeleteCategoryConfirm && (
+           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+             <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+               <h3 className="text-lg font-semibold text-gray-800 mb-4 text-right">تأیید حذف دسته‌بندی</h3>
+               <p className="text-gray-600 mb-6 text-right">
+                 آیا از حذف دسته‌بندی "{showDeleteCategoryConfirm.category}" اطمینان دارید؟ این عملیات قابل بازگشت نیست.
+               </p>
+               <div className="flex gap-3 justify-end">
+                 <button
+                   onClick={() => setShowDeleteCategoryConfirm(null)}
+                   className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+                 >
+                   انصراف
+                 </button>
+                 <button
+                   onClick={() => handleDeleteCategory(showDeleteCategoryConfirm.category, showDeleteCategoryConfirm.index)}
+                   disabled={deletingCategory}
+                   className={`px-4 py-2 rounded-lg transition-colors ${
+                     deletingCategory 
+                       ? 'bg-red-400 cursor-not-allowed' 
+                       : 'bg-red-600 hover:bg-red-700'
+                   } text-white`}
+                 >
+                   {deletingCategory ? "در حال حذف..." : "حذف"}
+                 </button>
+               </div>
+            </div>
+          </div>
+        )}
+
         {/* Products List */}
+         {activeTab === 'products' && (
         <div className="bg-white rounded-lg shadow-sm">
           <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-800">لیست محصولات</h3>
+               <h3 className="text-lg font-semibold text-gray-800 text-right">لیست محصولات ({products.length})</h3>
           </div>
           
           {filteredProducts.length === 0 ? (
@@ -506,50 +1689,39 @@ const AdminPanel = () => {
                 <div key={product.id} className="p-6 hover:bg-gray-50 transition-colors">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
-                          {product.images && product.images.length > 0 ? (
-                            <img
-                              src={product.images[0]}
-                              alt={product.name}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.nextSibling.style.display = 'flex';
-                              }}
-                            />
-                          ) : null}
-                          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ display: product.images && product.images.length > 0 ? 'none' : 'flex' }}>
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                        </div>
-                        <div>
-                          <h4 className="text-lg font-semibold text-gray-800">{product.name}</h4>
-                          <p className="text-gray-600 text-sm">{product.description}</p>
-                          <div className="flex items-center gap-4 mt-2">
+                         <h4 className="text-lg font-semibold text-gray-800 text-right">{product.name}</h4>
+                         <p className="text-gray-600 text-sm text-right">{product.description}</p>
+                         <div className="flex items-center gap-4 mt-2 text-right">
                             <span className="text-green-600 font-semibold">
-                              {product.price?.toLocaleString()} تومان
+                             {formatPriceWithUnit(product.price)} تومان
                             </span>
-                            <span className="text-blue-600 text-sm">{product.category}</span>
+                           {product.originalPrice && product.originalPrice !== product.price && (
+                             <span className="text-red-500 line-through text-sm">
+                               {formatPriceWithUnit(product.originalPrice)} تومان
+                             </span>
+                           )}
+                           <span className="text-blue-600 text-sm">{product.brand}</span>
+                           <span className="text-purple-600 text-sm">{product.category}</span>
+                           {product.vehicleType && (
+                             <span className="text-orange-600 text-sm">{product.vehicleType}</span>
+                           )}
                             <span className={`text-sm px-2 py-1 rounded-full ${
-                              product.stock > 10 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                             product.stockCount > 10 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                             }`}>
-                              موجودی: {product.stock}
+                             موجودی: {product.stockCount}
                             </span>
-                          </div>
-                        </div>
                       </div>
                     </div>
                     
                     <div className="flex gap-2">
                       <button
-                        onClick={() => setEditingProduct(product)}
+                           onClick={() => handleEditProduct(product)}
                         className="bg-blue-100 text-blue-600 px-3 py-1 rounded-lg hover:bg-blue-200 transition-colors"
                       >
                         ویرایش
                       </button>
                       <button
-                        onClick={() => handleDeleteProduct(product.id)}
+                           onClick={() => setShowDeleteConfirm(product.id)}
                         className="bg-red-100 text-red-600 px-3 py-1 rounded-lg hover:bg-red-200 transition-colors"
                       >
                         حذف
@@ -561,6 +1733,7 @@ const AdminPanel = () => {
             </div>
           )}
         </div>
+         )}
       </div>
     </div>
   );

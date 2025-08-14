@@ -3,6 +3,7 @@ import StarIcon from '@mui/icons-material/Star';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import { formatPrice } from '../../lib/utils';
 
 const FeaturedProducts = () => {
   const featuredProducts = [
@@ -125,11 +126,11 @@ const FeaturedProducts = () => {
                   <div className="flex items-center gap-1 sm:gap-2">
                     {product.discount !== "0%" ? (
                       <>
-                        <span className="text-base sm:text-lg font-bold text-red-600">{product.price}</span>
-                        <span className="text-xs sm:text-sm text-gray-500 line-through">{product.originalPrice}</span>
+                        <span className="text-base sm:text-lg font-bold text-red-600">{formatPrice(product.price)}</span>
+                        <span className="text-xs sm:text-sm text-gray-500 line-through">{formatPrice(product.originalPrice)}</span>
                       </>
                     ) : (
-                      <span className="text-base sm:text-lg font-bold text-gray-800">{product.price}</span>
+                      <span className="text-base sm:text-lg font-bold text-gray-800">{formatPrice(product.price)}</span>
                     )}
                   </div>
                   {product.discount !== "0%" && (

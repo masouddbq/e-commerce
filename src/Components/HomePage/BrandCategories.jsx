@@ -2,11 +2,14 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import PanToolAltOutlinedIcon from '@mui/icons-material/PanToolAltOutlined';
+import { supabase } from '../../lib/supabase';
 
 const BrandCategories = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showResults, setShowResults] = useState(false);
   const [filteredCars, setFilteredCars] = useState([]);
+  const [brands, setBrands] = useState([]);
+  const [loading, setLoading] = useState(true);
   const searchRef = useRef(null);
 
   // لیست کامل نام ماشین‌ها
@@ -58,6 +61,126 @@ const BrandCategories = () => {
     { id: 40, name: "مازدا BT-50", category: "دیزل", link: "/pickup/mazda-bt50" }
   ];
 
+  // دریافت برندها از دیتابیس
+  useEffect(() => {
+    const fetchBrands = async () => {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('brands')
+          .select('*')
+          .order('name');
+
+        if (error) {
+          console.error('Error fetching brands:', error);
+          // در صورت خطا، برندهای پیش‌فرض را اضافه کن
+          setBrands([
+            { id: 1, name: 'سایپا', image: '/saipa.png' },
+            { id: 2, name: 'ایران خودرو', image: '/irankhodro.png' },
+            { id: 3, name: 'پژو', image: '/peugeot.png' },
+            { id: 4, name: 'هیوندای', image: '/hyun.png' },
+            { id: 5, name: 'نیسان', image: '/nissan.png' },
+            { id: 6, name: 'تویوتا', image: '/toyota.png' },
+            { id: 7, name: 'لکسوس', image: '/lexus.png' },
+            { id: 8, name: 'کیا', image: '/kia.png' },
+          ]);
+        } else {
+          // تبدیل نام‌های فارسی به انگلیسی برای URL
+          const brandsWithImages = data.map(brand => {
+            const imageMap = {
+              'سایپا': '/saipa.png',
+              'ایران خودرو': '/irankhodro.png',
+              'پژو': '/peugeot.png',
+              'هیوندای': '/hyun.png',
+              'نیسان': '/nissan.png',
+              'تویوتا': '/toyota.png',
+              'لکسوس': '/lexus.png',
+              'کیا': '/kia.png',
+              'جیلی': '/geely.png',
+              'مزدا': '/mazda.png',
+              'ام‌جی': '/mg.png',
+              'ام جی': '/mg.png',
+              'میتسوبیشی': '/mitsubishi.png',
+              'فولکس‌واگن': '/volkswagen.png',
+              'فولکس واگن': '/volkswagen.jpg',
+              'سوزوکی': '/suzuki.png',
+              'رنو': '/renault.png',
+              'فاو': '/faw.png',
+              'جی‌ای‌سی': '/jac.png',
+              'جک': '/jac.png'
+            };
+            
+            return {
+              id: brand.id,
+              name: brand.name,
+              image: (imageMap[brand.name.replace(/\u200c/g, ' ').replace(/\s+/g, ' ').trim()] || imageMap[brand.name]) || '/default-brand.png',
+              slug: getBrandSlug(brand.name.replace(/\u200c/g, ' ').replace(/\s+/g, ' ').trim())
+            };
+          });
+          setBrands(brandsWithImages);
+        }
+      } catch (error) {
+        console.error('Error fetching brands:', error);
+        // در صورت خطا، برندهای پیش‌فرض را نمایش بده
+        setBrands([
+          { id: 1, name: 'سایپا', image: '/saipa.png' },
+          { id: 2, name: 'ایران خودرو', image: '/irankhodro.png' },
+          { id: 3, name: 'پژو', image: '/peugeot.png' },
+          { id: 4, name: 'هیوندای', image: '/hyun.png' },
+          { id: 5, name: 'نیسان', image: '/nissan.png' },
+          { id: 6, name: 'تویوتا', image: '/toyota.png' },
+          { id: 7, name: 'لکسوس', image: '/lexus.png' },
+          { id: 8, name: 'کیا', image: '/kia.png' },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBrands();
+
+    // Real-time subscription برای برندها
+    const channel = supabase
+      .channel('brands_changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'brands' }, 
+        (payload) => {
+          console.log('Real-time brand change:', payload);
+          // بروزرسانی خودکار لیست برندها
+          fetchBrands();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // تبدیل نام فارسی برند به slug انگلیسی
+  const getBrandSlug = (brandName) => {
+    const slugMap = {
+      'تویوتا': 'toyota',
+      'هیوندای': 'hyundai',
+      'نیسان': 'nissan',
+      'کیا': 'kia',
+      'لکسوس': 'lexus',
+      'جیلی': 'geely',
+      'مزدا': 'mazda',
+      'ام‌جی': 'mg',
+      'میتسوبیشی': 'mitsubishi',
+      'فولکس‌واگن': 'volkswagen',
+      'سایپا': 'saipa',
+      'سوزوکی': 'suzuki',
+      'رنو': 'renault',
+      'پژو': 'peugeot',
+      'ایران خودرو': 'irankhodro',
+      'فاو': 'faw',
+      'جی‌ای‌سی': 'jac'
+    };
+    return slugMap[brandName] || brandName.toLowerCase().replace(/\s+/g, '-');
+  };
+
   // فیلتر کردن ماشین‌ها بر اساس متن جستجو
   useEffect(() => {
     if (searchTerm.trim() === '') {
@@ -104,19 +227,8 @@ const BrandCategories = () => {
     // window.location.href = car.link;
   };
 
-  const brandImages = [
-    {id : 1 , title : 'سایپا' , src: '/saipa.png', link: '/brands/saipa'},
-    {id : 2 , title : 'ایران خودرو' , src: '/irankhodro.png', link: '/brands/irankhodro'},
-    {id : 3 , title : 'پژو' , src: '/peugeot.png', link: '/brands/peugeot'},
-    {id : 4 , title : 'هیوندای' , src: '/hyun.png', link: '/brands/hyundai'},
-    {id : 5 , title : 'نیسان' , src:'/nissan.png', link: '/brands/nissan'},
-    {id : 6 , title : 'تویوتا' , src: '/toyota.png', link: '/brands/toyota'},
-    {id : 7 , title : 'لکسوس' , src: '/lexus.png', link: '/brands/lexus'},
-    {id : 8 , title : 'کیا' , src: '/kia.png', link: '/brands/kia'},
-  ]
-
   return (
-    <div className='flex flex-col lg:flex-row justify-evenly items-center w-full px-4 sm:px-6 lg:px-8'>
+    <div className='flex flex-col lg:flex-row justify-evenly items-center w-full px-12 sm:px-4 lg:px-4'>
       {/* Search Section */}
       <div className='w-full lg:w-auto flex flex-col justify-center items-center mb-12 lg:mb-28'>
         <h1 className='text-xl sm:text-2xl font-bold text-center mb-4'>از دسته بندی برند مورد نظرت شروع کن...</h1>
@@ -185,19 +297,29 @@ const BrandCategories = () => {
       </div>
 
       {/* Brand Logos Grid */}
-      <div className='grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4 sm:gap-6 lg:gap-8 w-full lg:w-auto mb-12 lg:mb-28'>
-        {brandImages.map(logo => (
-          <Link key={logo.id} to={logo.link} className='flex flex-col justify-evenly items-center p-2 group'>
-            <img 
-              className='w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 object-contain border-4 sm:border-6 lg:border-8 transition-all duration-300 border-double hover:shadow-xl hover:shadow-slate-400 hover:cursor-pointer hover:scale-110 rounded-[50%] shadow-md shadow-slate-600 group-hover:border-blue-500' 
-              src={logo.src} 
-              alt={logo.title} 
-            />
-            <h2 className='mt-2 sm:mt-3 lg:mt-4 font-extrabold text-xs sm:text-sm md:text-base lg:text-lg text-center group-hover:text-blue-600 transition-colors duration-300'>
-              {logo.title}
-            </h2>
-          </Link>
-        ))}
+      <div className='grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-4 lg:gap-1 w-full lg:w-auto mb-12 lg:mb-28'>
+        {loading ? (
+          // Skeleton loader برای برندها
+          Array.from({ length: 9 }).map((_, index) => (
+            <div key={index} className='flex flex-col justify-evenly items-center p-2'>
+              <div className='w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 bg-gray-200 animate-pulse rounded-full'></div>
+              <div className='mt-2 sm:mt-3 lg:mt-4 w-16 h-4 bg-gray-200 animate-pulse rounded'></div>
+            </div>
+          ))
+        ) : (
+          brands.map(brand => (
+            <Link key={brand.id} to={`/brands/${brand.slug}`} className='flex flex-col justify-evenly items-center p-2 group'>
+              <img 
+                className='w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-24 object-contain border-4 sm:border-6 lg:border-8 transition-all duration-300 border-double hover:shadow-xl hover:shadow-slate-400 hover:cursor-pointer hover:scale-110 rounded-[50%] shadow-md shadow-slate-600 group-hover:border-blue-500' 
+                src={brand.image} 
+                alt={brand.name} 
+              />
+              <h2 className='mt-2 sm:mt-3 lg:mt-4 font-extrabold text-xs sm:text-sm md:text-base lg:text-lg text-center group-hover:text-blue-600 transition-colors duration-300'>
+                {brand.name}
+              </h2>
+            </Link>
+          ))
+        )}
       </div>
     </div>
   )
