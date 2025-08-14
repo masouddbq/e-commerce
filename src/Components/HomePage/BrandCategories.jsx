@@ -66,6 +66,20 @@ const BrandCategories = () => {
     const fetchBrands = async () => {
       try {
         setLoading(true);
+        if (!supabase) {
+          // در صورت عدم تنظیم Supabase، از داده‌های پیش‌فرض استفاده کن
+          setBrands([
+            { id: 1, name: 'سایپا', image: '/saipa.png', slug: getBrandSlug('سایپا') },
+            { id: 2, name: 'ایران خودرو', image: '/irankhodro.png', slug: getBrandSlug('ایران خودرو') },
+            { id: 3, name: 'پژو', image: '/peugeot.png', slug: getBrandSlug('پژو') },
+            { id: 4, name: 'هیوندای', image: '/hyun.png', slug: getBrandSlug('هیوندای') },
+            { id: 5, name: 'نیسان', image: '/nissan.png', slug: getBrandSlug('نیسان') },
+            { id: 6, name: 'تویوتا', image: '/toyota.png', slug: getBrandSlug('تویوتا') },
+            { id: 7, name: 'لکسوس', image: '/lexus.png', slug: getBrandSlug('لکسوس') },
+            { id: 8, name: 'کیا', image: '/kia.png', slug: getBrandSlug('کیا') },
+          ]);
+          return;
+        }
         const { data, error } = await supabase
           .from('brands')
           .select('*')
@@ -75,14 +89,14 @@ const BrandCategories = () => {
           console.error('Error fetching brands:', error);
           // در صورت خطا، برندهای پیش‌فرض را اضافه کن
           setBrands([
-            { id: 1, name: 'سایپا', image: '/saipa.png' },
-            { id: 2, name: 'ایران خودرو', image: '/irankhodro.png' },
-            { id: 3, name: 'پژو', image: '/peugeot.png' },
-            { id: 4, name: 'هیوندای', image: '/hyun.png' },
-            { id: 5, name: 'نیسان', image: '/nissan.png' },
-            { id: 6, name: 'تویوتا', image: '/toyota.png' },
-            { id: 7, name: 'لکسوس', image: '/lexus.png' },
-            { id: 8, name: 'کیا', image: '/kia.png' },
+            { id: 1, name: 'سایپا', image: '/saipa.png', slug: getBrandSlug('سایپا') },
+            { id: 2, name: 'ایران خودرو', image: '/irankhodro.png', slug: getBrandSlug('ایران خودرو') },
+            { id: 3, name: 'پژو', image: '/peugeot.png', slug: getBrandSlug('پژو') },
+            { id: 4, name: 'هیوندای', image: '/hyun.png', slug: getBrandSlug('هیوندای') },
+            { id: 5, name: 'نیسان', image: '/nissan.png', slug: getBrandSlug('نیسان') },
+            { id: 6, name: 'تویوتا', image: '/toyota.png', slug: getBrandSlug('تویوتا') },
+            { id: 7, name: 'لکسوس', image: '/lexus.png', slug: getBrandSlug('لکسوس') },
+            { id: 8, name: 'کیا', image: '/kia.png', slug: getBrandSlug('کیا') },
           ]);
         } else {
           // تبدیل نام‌های فارسی به انگلیسی برای URL
@@ -113,8 +127,8 @@ const BrandCategories = () => {
             return {
               id: brand.id,
               name: brand.name,
-              image: (imageMap[brand.name.replace(/\u200c/g, ' ').replace(/\s+/g, ' ').trim()] || imageMap[brand.name]) || '/default-brand.png',
-              slug: getBrandSlug(brand.name.replace(/\u200c/g, ' ').replace(/\s+/g, ' ').trim())
+              image: imageMap[brand.name] || '/default-brand.png',
+              slug: getBrandSlug(brand.name)
             };
           });
           setBrands(brandsWithImages);
@@ -123,14 +137,14 @@ const BrandCategories = () => {
         console.error('Error fetching brands:', error);
         // در صورت خطا، برندهای پیش‌فرض را نمایش بده
         setBrands([
-          { id: 1, name: 'سایپا', image: '/saipa.png' },
-          { id: 2, name: 'ایران خودرو', image: '/irankhodro.png' },
-          { id: 3, name: 'پژو', image: '/peugeot.png' },
-          { id: 4, name: 'هیوندای', image: '/hyun.png' },
-          { id: 5, name: 'نیسان', image: '/nissan.png' },
-          { id: 6, name: 'تویوتا', image: '/toyota.png' },
-          { id: 7, name: 'لکسوس', image: '/lexus.png' },
-          { id: 8, name: 'کیا', image: '/kia.png' },
+          { id: 1, name: 'سایپا', image: '/saipa.png', slug: getBrandSlug('سایپا') },
+          { id: 2, name: 'ایران خودرو', image: '/irankhodro.png', slug: getBrandSlug('ایران خودرو') },
+          { id: 3, name: 'پژو', image: '/peugeot.png', slug: getBrandSlug('پژو') },
+          { id: 4, name: 'هیوندای', image: '/hyun.png', slug: getBrandSlug('هیوندای') },
+          { id: 5, name: 'نیسان', image: '/nissan.png', slug: getBrandSlug('نیسان') },
+          { id: 6, name: 'تویوتا', image: '/toyota.png', slug: getBrandSlug('تویوتا') },
+          { id: 7, name: 'لکسوس', image: '/lexus.png', slug: getBrandSlug('لکسوس') },
+          { id: 8, name: 'کیا', image: '/kia.png', slug: getBrandSlug('کیا') },
         ]);
       } finally {
         setLoading(false);
@@ -140,21 +154,23 @@ const BrandCategories = () => {
     fetchBrands();
 
     // Real-time subscription برای برندها
-    const channel = supabase
-      .channel('brands_changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'brands' }, 
-        (payload) => {
-          console.log('Real-time brand change:', payload);
-          // بروزرسانی خودکار لیست برندها
-          fetchBrands();
-        }
-      )
-      .subscribe();
+    if (supabase) {
+      const channel = supabase
+        .channel('brands_changes')
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'brands' }, 
+          (payload) => {
+            console.log('Real-time brand change:', payload);
+            // بروزرسانی خودکار لیست برندها
+            fetchBrands();
+          }
+        )
+        .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, []);
 
   // تبدیل نام فارسی برند به slug انگلیسی

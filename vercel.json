@@ -5,6 +5,10 @@
       "destination": "/index.html"
     }
   ],
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/" }
+  ],
   "headers": [
     {
       "source": "/assets/(.*)",
