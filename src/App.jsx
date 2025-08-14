@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React from 'react';
 import './App.css'
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Navbar from './Components/Navbar/Navbar'
@@ -10,7 +10,6 @@ import ContactUs from './Components/Pages/ContactUs';
 import AboutUs from './Components/Pages/AboutUs';
 import CustomerClub from './Components/Pages/CustomerClub';
 import Footer from './Components/Footer/Footer';
-import { supabase } from './lib/supabase'
 import AdminPanel from './Components/Admin/AdminPanel'
 
 // Brand Pages
@@ -34,29 +33,6 @@ import JACPage from './Components/Pages/JACPage';
 import ProductDetail from './Components/ProductDetail/ProductDetail';
 
 function App() {
-
-  const testConnection = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .limit(1)
-      
-      if (error) {
-        console.error('Error:', error)
-      } else {
-        console.log('Success! Data:', data)
-      }
-    } catch (err) {
-      console.error('Connection failed:', err)
-    }
-  }
-
-  useEffect(() => {
-    testConnection()
-  }, [])
-
-
   return (
     <div className='base-container'>
       <BrowserRouter>
