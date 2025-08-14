@@ -61,14 +61,14 @@ const FeaturedProducts = () => {
   ];
 
   return (
-    <div className="w-full py-16 bg-gradient-to-br from-gray-50 to-blue-50">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-800 mb-4">محصولات ویژه و جدید</h2>
-          <p className="text-gray-600">بهترین و جدیدترین محصولات ما را از دست ندهید</p>
+    <div className="w-full py-8 sm:py-12 lg:py-16 bg-gradient-to-br from-gray-50 to-blue-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-8 sm:mb-10 lg:mb-12">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-3 sm:mb-4">محصولات ویژه و جدید</h2>
+          <p className="text-sm sm:text-base text-gray-600">بهترین و جدیدترین محصولات ما را از دست ندهید</p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
           {featuredProducts.map((product) => (
             <div key={product.id} className="group bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden transform hover:-translate-y-2">
               {/* تصویر محصول */}
@@ -76,12 +76,12 @@ const FeaturedProducts = () => {
                 <img 
                   src={product.image} 
                   alt={product.name}
-                  className="w-full h-48 object-contain p-4 bg-gradient-to-br from-gray-100 to-gray-200 group-hover:scale-110 transition-transform duration-300"
+                  className="w-full h-32 sm:h-40 md:h-48 object-contain p-3 sm:p-4 bg-gradient-to-br from-gray-100 to-gray-200 group-hover:scale-110 transition-transform duration-300"
                 />
                 
                 {/* Badge */}
-                <div className="absolute top-3 right-3">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold text-white ${
+                <div className="absolute top-2 sm:top-3 right-2 sm:right-3">
+                  <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-bold text-white ${
                     product.badge === "جدید" ? "bg-green-500" :
                     product.badge === "پرفروش" ? "bg-orange-500" :
                     "bg-red-500"
@@ -91,29 +91,29 @@ const FeaturedProducts = () => {
                 </div>
                 
                 {/* دکمه‌های عملیات */}
-                <div className="absolute top-3 left-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <button className="w-8 h-8 bg-white rounded-full shadow-md hover:bg-red-50 transition-colors flex items-center justify-center">
-                    <FavoriteIcon className="text-gray-600 text-sm" />
+                <div className="absolute top-2 sm:top-3 left-2 sm:left-3 flex flex-col gap-1 sm:gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <button className="w-6 h-6 sm:w-8 sm:h-8 bg-white rounded-full shadow-md hover:bg-red-50 transition-colors flex items-center justify-center">
+                    <FavoriteIcon className="text-gray-600 text-xs sm:text-sm" />
                   </button>
-                  <button className="w-8 h-8 bg-white rounded-full shadow-md hover:bg-blue-50 transition-colors flex items-center justify-center">
-                    <VisibilityIcon className="text-gray-600 text-sm" />
+                  <button className="w-6 h-6 sm:w-8 sm:h-8 bg-white rounded-full shadow-md hover:bg-blue-50 transition-colors flex items-center justify-center">
+                    <VisibilityIcon className="text-gray-600 text-xs sm:text-sm" />
                   </button>
                 </div>
               </div>
               
               {/* محتوای محصول */}
-              <div className="p-4">
-                <h3 className="font-semibold text-gray-800 mb-2 text-sm leading-tight group-hover:text-blue-600 transition-colors">
+              <div className="p-3 sm:p-4">
+                <h3 className="font-semibold text-gray-800 mb-2 text-xs sm:text-sm leading-tight group-hover:text-blue-600 transition-colors">
                   {product.name}
                 </h3>
                 
                 {/* امتیاز */}
-                <div className="flex items-center mb-3">
+                <div className="flex items-center mb-2 sm:mb-3">
                   <div className="flex text-yellow-400">
                     {[...Array(5)].map((_, i) => (
                       <StarIcon 
                         key={i} 
-                        className={`text-sm ${i < Math.floor(product.rating) ? "text-yellow-400" : "text-gray-300"}`} 
+                        className={`text-xs sm:text-sm ${i < Math.floor(product.rating) ? "text-yellow-400" : "text-gray-300"}`} 
                       />
                     ))}
                   </div>
@@ -121,15 +121,15 @@ const FeaturedProducts = () => {
                 </div>
                 
                 {/* قیمت */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <div className="flex items-center gap-1 sm:gap-2">
                     {product.discount !== "0%" ? (
                       <>
-                        <span className="text-lg font-bold text-red-600">{product.price}</span>
-                        <span className="text-sm text-gray-500 line-through">{product.originalPrice}</span>
+                        <span className="text-base sm:text-lg font-bold text-red-600">{product.price}</span>
+                        <span className="text-xs sm:text-sm text-gray-500 line-through">{product.originalPrice}</span>
                       </>
                     ) : (
-                      <span className="text-lg font-bold text-gray-800">{product.price}</span>
+                      <span className="text-base sm:text-lg font-bold text-gray-800">{product.price}</span>
                     )}
                   </div>
                   {product.discount !== "0%" && (
@@ -140,7 +140,7 @@ const FeaturedProducts = () => {
                 </div>
                 
                 {/* دکمه خرید */}
-                <button className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 flex items-center justify-center gap-2 font-semibold group-hover:shadow-lg">
+                <button className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-2 sm:py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 flex items-center justify-center gap-2 font-semibold group-hover:shadow-lg text-sm sm:text-base">
                   <ShoppingCartIcon className="text-sm" />
                   افزودن به سبد خرید
                 </button>
@@ -150,8 +150,8 @@ const FeaturedProducts = () => {
         </div>
         
         {/* دکمه مشاهده همه */}
-        <div className="text-center mt-10">
-          <button className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl">
+        <div className="text-center mt-8 sm:mt-10">
+          <button className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 sm:px-8 py-2 sm:py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl text-sm sm:text-base">
             مشاهده همه محصولات ویژه
           </button>
         </div>

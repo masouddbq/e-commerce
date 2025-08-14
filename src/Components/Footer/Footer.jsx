@@ -41,41 +41,41 @@ const Footer = () => {
   return (
     <>
       <div className="w-full bg-gradient-to-t from-blue-900 to-blue-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 lg:py-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
             
             {/* اطلاعات شرکت */}
             <div className="lg:col-span-1">
-              <h1 className="text-3xl font-bold mb-4">لنت شاپ</h1>
-              <p className="text-blue-100 mb-4 leading-relaxed">
+              <h1 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4">لنت شاپ</h1>
+              <p className="text-blue-100 mb-4 leading-relaxed text-sm sm:text-base">
                 فروشگاه تخصصی لنت ترمز خودرو با بیش از 10 سال تجربه در ارائه بهترین محصولات و خدمات
               </p>
               
-              <div className="space-y-3">
-                <div className="flex items-center">
-                  <LocationOnIcon className="text-blue-200 mr-2" />
-                  <span className="text-sm font-bold">مشهد - بلوار کوشش - کوشش ۲۹</span>
+              <div className="space-y-2 sm:space-y-3">
+                <div className="flex items-start">
+                  <LocationOnIcon className="text-blue-200 mr-2 mt-0.5 flex-shrink-0" />
+                  <span className="text-xs sm:text-sm font-bold leading-relaxed">مشهد - بلوار کوشش - کوشش ۲۹</span>
                 </div>
                 <div className="flex items-center">
-                  <PhoneIcon className="text-blue-200 mr-2" />
-                  <span className="text-md font-bold">۰۹۲۰۹۳۵۰۲۳۵</span>
+                  <PhoneIcon className="text-blue-200 mr-2 flex-shrink-0" />
+                  <span className="text-sm sm:text-base font-bold">۰۹۲۰۹۳۵۰۲۳۵</span>
                 </div>
-                <div className="flex items-center">
-                  <PhoneIcon className="text-blue-200 mr-2" />
-                  <span className="text-[12px] font-bold">ساعت کاری همه روزه از ۸:۳۰ الی ۱۹:۳۰ (به جز جمعه)</span>
+                <div className="flex items-start">
+                  <PhoneIcon className="text-blue-200 mr-2 mt-0.5 flex-shrink-0" />
+                  <span className="text-xs font-bold leading-relaxed">ساعت کاری همه روزه از ۸:۳۰ الی ۱۹:۳۰ (به جز جمعه)</span>
                 </div>
               </div>
             </div>
 
             {/* محصولات پرفروش */}
             <div>
-              <h3 className="text-lg font-semibold mb-4 text-blue-200">محصولات پرفروش</h3>
-              <ul className="space-y-2">
+              <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-blue-200">محصولات پرفروش</h3>
+              <ul className="space-y-1 sm:space-y-2">
                 {footerLinks.map((link) => (
                   <li key={link.id}>
                     <Link 
                       to={link.link} 
-                      className="text-blue-100 hover:text-white transition-colors text-sm"
+                      className="text-blue-100 hover:text-white transition-colors text-xs sm:text-sm"
                     >
                       {link.title}
                     </Link>
@@ -86,13 +86,13 @@ const Footer = () => {
 
             {/* لینک‌های شرکت */}
             <div>
-              <h3 className="text-lg font-semibold mb-4 text-blue-200">شرکت</h3>
-              <ul className="space-y-2">
+              <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-blue-200">شرکت</h3>
+              <ul className="space-y-1 sm:space-y-2">
                 {companyLinks.map((link) => (
                   <li key={link.id}>
                     <Link 
                       to={link.link} 
-                      className="text-blue-100 hover:text-white transition-colors text-sm"
+                      className="text-blue-100 hover:text-white transition-colors text-xs sm:text-sm"
                     >
                       {link.title}
                     </Link>
@@ -103,13 +103,13 @@ const Footer = () => {
 
             {/* خدمات مشتریان */}
             <div>
-              <h3 className="text-lg font-semibold mb-4 text-blue-200">خدمات مشتریان</h3>
-              <ul className="space-y-2">
+              <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-blue-200">خدمات مشتریان</h3>
+              <ul className="space-y-1 sm:space-y-2">
                 {customerLinks.map((link) => (
                   <li key={link.id}>
                     <Link 
                       to={link.link} 
-                      className="text-blue-100 hover:text-white transition-colors text-sm"
+                      className="text-blue-100 hover:text-white transition-colors text-xs sm:text-sm"
                     >
                       {link.title}
                     </Link>
@@ -120,25 +120,25 @@ const Footer = () => {
           </div>
 
           {/* شبکه‌های اجتماعی */}
-          <div className="border-t border-blue-500 pt-8 mt-8">
-            <div className="flex flex-col md:flex-row justify-between items-center">
-              <div className="flex space-x-4 mb-4 md:mb-0">
-                <a href="#" className="w-10 h-10 bg-blue-700 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors">
-                  <FacebookIcon className="text-white" />
+          <div className="border-t border-blue-500 pt-6 sm:pt-8 mt-6 sm:mt-8">
+            <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+              <div className="flex space-x-3 sm:space-x-4">
+                <a href="#" className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-700 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors">
+                  <FacebookIcon className="text-white text-sm sm:text-base" />
                 </a>
-                <a href="#" className="w-10 h-10 bg-blue-700 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors">
-                  <TwitterIcon className="text-white" />
+                <a href="#" className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-700 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors">
+                  <TwitterIcon className="text-white text-sm sm:text-base" />
                 </a>
-                <a href="#" className="w-10 h-10 bg-blue-700 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors">
-                  <InstagramIcon className="text-white" />
+                <a href="#" className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-700 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors">
+                  <InstagramIcon className="text-white text-sm sm:text-base" />
                 </a>
-                <a href="#" className="w-10 h-10 bg-blue-700 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors">
-                  <YouTubeIcon className="text-white" />
+                <a href="#" className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-700 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors">
+                  <YouTubeIcon className="text-white text-sm sm:text-base" />
                 </a>
               </div>
               
-              <div className="text-center md:text-right">
-                <p className="text-blue-200 text-sm">
+              <div className="text-center sm:text-right">
+                <p className="text-blue-200 text-xs sm:text-sm">
                   © 1404 لنت شاپ - تمامی حقوق محفوظ است
                 </p>
               </div>

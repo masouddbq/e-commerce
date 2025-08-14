@@ -116,14 +116,15 @@ const BrandCategories = () => {
   ]
 
   return (
-    <div className='flex justify-evenly items-center w-full'>
-      <div className='w-full flex flex-col justify-center items-center mb-28'>
-        <h1 className='text-2xl font-bold'>از دسته بندی برند مورد نظرت شروع کن...</h1>
+    <div className='flex flex-col lg:flex-row justify-evenly items-center w-full px-4 sm:px-6 lg:px-8'>
+      {/* Search Section */}
+      <div className='w-full lg:w-auto flex flex-col justify-center items-center mb-12 lg:mb-28'>
+        <h1 className='text-xl sm:text-2xl font-bold text-center mb-4'>از دسته بندی برند مورد نظرت شروع کن...</h1>
         
         {/* Search Input with Smart Search */}
         <div className='flex items-center justify-center gap-2 m-4 relative' ref={searchRef}>
           <input 
-            className='border w-72 text-center outline-none border-gray-300 rounded-md shadow-md shadow-slate-300 px-4 py-2' 
+            className='border w-64 sm:w-72 text-center outline-none border-gray-300 rounded-md shadow-md shadow-slate-300 px-4 py-2 text-sm sm:text-base' 
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -138,7 +139,7 @@ const BrandCategories = () => {
 
           {/* نتایج جستجو */}
           {showResults && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-2xl border border-gray-200 max-h-96 overflow-y-auto z-50 w-72">
+            <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-2xl border border-gray-200 max-h-96 overflow-y-auto z-50 w-64 sm:w-72">
               <div className="p-2">
                 {filteredCars.map((car) => (
                   <div
@@ -177,15 +178,27 @@ const BrandCategories = () => {
           )}
         </div>
 
-        <h1><PanToolAltOutlinedIcon className='scale-110' />اینجا جستجو کن...</h1>
+        <h1 className='flex items-center gap-2 text-sm sm:text-base'>
+          <PanToolAltOutlinedIcon className='scale-110' />
+          اینجا جستجو کن...
+        </h1>
       </div>
 
-      {brandImages.map(logo => (
-        <Link key={logo.id} to={logo.link} className='flex flex-col justify-evenly items-center w-1/4 mb-28 p-2 group'>
-          <img className='w-28 h-28 object-contain border-8 transition-all duration-300 border-double hover:shadow-xl hover:shadow-slate-400 hover:cursor-pointer hover:scale-110 rounded-[50%] shadow-md shadow-slate-600 group-hover:border-blue-500' src={logo.src} alt={logo.title} />
-          <h2 className='mt-4 font-extrabold group-hover:text-blue-600 transition-colors duration-300'>{logo.title}</h2>
-        </Link>
-      ))}
+      {/* Brand Logos Grid */}
+      <div className='grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4 sm:gap-6 lg:gap-8 w-full lg:w-auto mb-12 lg:mb-28'>
+        {brandImages.map(logo => (
+          <Link key={logo.id} to={logo.link} className='flex flex-col justify-evenly items-center p-2 group'>
+            <img 
+              className='w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 object-contain border-4 sm:border-6 lg:border-8 transition-all duration-300 border-double hover:shadow-xl hover:shadow-slate-400 hover:cursor-pointer hover:scale-110 rounded-[50%] shadow-md shadow-slate-600 group-hover:border-blue-500' 
+              src={logo.src} 
+              alt={logo.title} 
+            />
+            <h2 className='mt-2 sm:mt-3 lg:mt-4 font-extrabold text-xs sm:text-sm md:text-base lg:text-lg text-center group-hover:text-blue-600 transition-colors duration-300'>
+              {logo.title}
+            </h2>
+          </Link>
+        ))}
+      </div>
     </div>
   )
 }
