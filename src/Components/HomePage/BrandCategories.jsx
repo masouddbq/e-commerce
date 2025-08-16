@@ -184,15 +184,18 @@ const BrandCategories = () => {
       'جیلی': 'geely',
       'مزدا': 'mazda',
       'ام‌جی': 'mg',
+      'ام جی': 'mg',
       'میتسوبیشی': 'mitsubishi',
       'فولکس‌واگن': 'volkswagen',
+      'فولکس واگن': 'volkswagen',
       'سایپا': 'saipa',
       'سوزوکی': 'suzuki',
       'رنو': 'renault',
       'پژو': 'peugeot',
       'ایران خودرو': 'irankhodro',
       'فاو': 'faw',
-      'جی‌ای‌سی': 'jac'
+      'جی‌ای‌سی': 'jac',
+      'جک': 'jac'
     };
     return slugMap[brandName] || brandName.toLowerCase().replace(/\s+/g, '-');
   };
@@ -313,7 +316,7 @@ const BrandCategories = () => {
       </div>
 
       {/* Brand Logos Grid */}
-      <div className='grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-4 lg:gap-1 w-full lg:w-auto mb-12 lg:mb-28'>
+      <div className='grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-9 gap-2 sm:gap-4 lg:gap-1 w-full lg:w-auto mb-12 lg:mb-28'>
         {loading ? (
           // Skeleton loader برای برندها
           Array.from({ length: 9 }).map((_, index) => (

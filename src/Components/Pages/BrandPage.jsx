@@ -41,11 +41,30 @@ const BrandPage = () => {
       setError(null);
       const brandName = getBrandNameFromSlug(brandSlug);
       
+      // نام‌های معادل برای برخی برندها (برای پشتیبانی از نگارش‌های مختلف)
+      const synonymBase = {
+        'volkswagen': ['فولکس‌واگن', 'فولکس واگن'],
+        'mg': ['ام‌جی', 'ام جی'],
+        'irankhodro': ['ایران‌خودرو', 'ایران خودرو'],
+        'jac': ['جی‌ای‌سی', 'جک']
+      };
+
+      const baseNames = synonymBase[brandSlug] || [brandName];
+
+      // پذیرش هر دو حالت نیم‌فاصله و فاصله معمولی برای همه نام‌های معادل
+      const brandVariants = Array.from(new Set(
+        baseNames.flatMap((n) => (n ? [
+          n,
+          n.replace(/\u200c/g, ' ').trim(),
+          n.replace(/\s+/g, '\u200c').trim()
+        ] : []))
+      )).filter(Boolean);
+      
       // دریافت اطلاعات برند
       const { data: brandData, error: brandError } = await supabase
         .from('brands')
         .select('*')
-        .eq('name', brandName)
+        .in('name', brandVariants)
         .single();
 
       if (brandError && brandError.code !== 'PGRST116') {
@@ -55,11 +74,11 @@ const BrandPage = () => {
 
       setBrand(brandData || { name: brandName, description: `محصولات برند ${brandName}` });
 
-      // دریافت محصولات برند
+      // دریافت محصولات برند (هر دو حالت نیم‌فاصله و فاصله)
       const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select('*')
-        .eq('brand', brandName)
+        .in('brand', brandVariants)
         .order('created_at', { ascending: false });
 
       if (productsError) {

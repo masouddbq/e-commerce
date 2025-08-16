@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS products (
   price VARCHAR(50) NOT NULL,
   originalPrice VARCHAR(50),
   brand VARCHAR(100) NOT NULL,
+  padBrand VARCHAR(100),
+  vehicleType VARCHAR(50),
   category VARCHAR(100) NOT NULL,
   suitableFor TEXT,
   stockStatus VARCHAR(50) DEFAULT 'موجود',
@@ -160,6 +162,14 @@ INSERT INTO categories (name, description) VALUES
   ('فلزی', 'دسته‌بندی فلزی'),
   ('پلاستیکی', 'دسته‌بندی پلاستیکی')
 ON CONFLICT (name) DO NOTHING;
+
+-- اطمینان از وجود ستون padBrand در جدول products
+ALTER TABLE IF EXISTS products
+  ADD COLUMN IF NOT EXISTS padBrand VARCHAR(100);
+
+-- اطمینان از وجود ستون vehicleType در جدول products
+ALTER TABLE IF EXISTS products
+  ADD COLUMN IF NOT EXISTS vehicleType VARCHAR(50);
 
 -- ایجاد Storage Bucket برای عکس‌های محصولات
 -- این دستورات باید در SQL Editor اجرا شوند

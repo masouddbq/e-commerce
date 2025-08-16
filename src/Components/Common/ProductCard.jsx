@@ -14,20 +14,24 @@ const ProductCard = ({ product, brandSlug }) => {
       'جیلی': 'geely',
       'مزدا': 'mazda',
       'ام‌جی': 'mg',
+      'ام جی': 'mg',
       'میتسوبیشی': 'mitsubishi',
       'فولکس‌واگن': 'volkswagen',
+      'فولکس واگن': 'volkswagen',
       'سایپا': 'saipa',
       'سوزوکی': 'suzuki',
       'رنو': 'renault',
       'پژو': 'peugeot',
       'ایران‌خودرو': 'irankhodro',
       'فاو': 'faw',
-      'جی‌ای‌سی': 'jac'
+      'جی‌ای‌سی': 'jac',
+      'جک': 'jac'
     };
     return brandMap[brand] || brand.toLowerCase();
   };
 
   const brandSlugForRoute = getBrandSlug(product.brand);
+  const padBrand = product.padBrand || product.padbrand || null;
 
   return (
     <div className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden border border-blue-200 flex flex-col h-full">
@@ -55,9 +59,11 @@ const ProductCard = ({ product, brandSlug }) => {
           {product.name}
         </h3>
         
-        {/* برند و دسته‌بندی */}
+        {/* نوع برند لنت و دسته‌بندی (بدون نمایش نام برند شرکت) */}
         <div className="flex justify-between items-center mb-3 min-h-[1.5rem]">
-          <span className="text-sm text-blue-600 font-semibold">{product.brand}</span>
+          {padBrand && (
+            <span className="text-sm text-pink-600 font-semibold">{padBrand}</span>
+          )}
           <span className="text-sm text-gray-600">{product.category}</span>
         </div>
         

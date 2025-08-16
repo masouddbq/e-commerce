@@ -71,7 +71,7 @@ const Navbar = () => {
       <div className='hidden lg:flex justify-evenly items-center shadow-2xl shadow-gray-400 w-full bg-gradient-to-t from-blue-600 to-blue-900 relative'>
         <div className='flex justify-center items-center w-full'>
           {navPages.map(page => ( 
-            <Link className='text-white text-sm mx-4 hover:text-orange-300 transition-colors duration-200' key={page.id} to={page.link}>{page.title}</Link>
+            <Link className='text-white text-sm mx-3 hover:text-orange-300 transition-colors duration-200' key={page.id} to={page.link}>{page.title}</Link>
           ))}
           {/* Login/Register Icons */}
           <div className='flex items-center space-x-2 mr-4'>

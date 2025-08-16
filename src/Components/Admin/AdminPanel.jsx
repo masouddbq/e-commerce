@@ -42,6 +42,7 @@ const AdminPanel = () => {
     price: "",
     originalPrice: "",
     brand: "",
+    padBrand: "",
     category: "",
     vehicleType: "", // اضافه کردن فیلد نوع خودرو
     suitableFor: "",
@@ -364,6 +365,13 @@ const AdminPanel = () => {
         created_at: new Date().toISOString()
       };
 
+      // فقط در صورتی که ستون در DB وجود داشته باشد، درج موفق می‌شود.
+      // برای جلوگیری از خطا در حالت عدم وجود ستون، کلید را فقط در صورت مقداردهی اضافه می‌کنیم.
+      if (newProduct.padBrand) {
+        // از نام ستون lowercase نیز پشتیبانی می‌کنیم
+        productData.padbrand = newProduct.padBrand;
+      }
+
       // افزودن به دیتابیس
       const { data, error } = await supabase
         .from("products")
@@ -384,6 +392,7 @@ const AdminPanel = () => {
         price: "",
         originalPrice: "",
         brand: "",
+        padBrand: "",
         category: "",
         vehicleType: "", // پاک کردن نوع خودرو
         suitableFor: "",
@@ -428,6 +437,7 @@ const AdminPanel = () => {
       price: product.price || "",
       originalPrice: product.originalPrice || "",
       brand: product.brand || "",
+      padBrand: product.padBrand || product.padbrand || "",
       category: product.category || "",
       vehicleType: product.vehicleType || "", // اضافه کردن نوع خودرو
       suitableFor: product.suitableFor || "",
@@ -513,6 +523,10 @@ const AdminPanel = () => {
         updated_at: new Date().toISOString()
       };
 
+      if (newProduct.padBrand) {
+        productData.padbrand = newProduct.padBrand;
+      }
+
       const { error } = await supabase
         .from("products")
         .update(productData)
@@ -526,6 +540,7 @@ const AdminPanel = () => {
         price: "",
         originalPrice: "",
         brand: "",
+        padBrand: "",
         category: "",
         vehicleType: "", // پاک کردن نوع خودرو
         suitableFor: "",
@@ -1192,6 +1207,7 @@ const AdminPanel = () => {
                     price: "",
                     originalPrice: "",
                     brand: "",
+                    padBrand: "",
                     category: "",
                     vehicleType: "", // پاک کردن نوع خودرو
                     suitableFor: "",
@@ -1267,6 +1283,17 @@ const AdminPanel = () => {
                   <option value="ایران خودرو">ایران خودرو</option>
                   <option value="فاو">فاو</option>
                   <option value="جی‌ای‌سی">جی‌ای‌سی</option>
+                </select>
+
+                <select
+                  value={newProduct.padBrand}
+                  onChange={(e) => setNewProduct({...newProduct, padBrand: e.target.value})}
+                  className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right"
+                >
+                  <option value="">انتخاب برند لنت</option>
+                  <option value="آفورتیس">آفورتیس</option>
+                  <option value="آسیمکو">آسیمکو</option>
+                  <option value="امکو">امکو</option>
                 </select>
 
                 <select
@@ -1552,6 +1579,7 @@ const AdminPanel = () => {
                     price: "",
                     originalPrice: "",
                     brand: "",
+                    padBrand: "",
                     category: "",
                     vehicleType: "", // پاک کردن نوع خودرو
                     suitableFor: "",
@@ -1701,6 +1729,9 @@ const AdminPanel = () => {
                              </span>
                            )}
                            <span className="text-blue-600 text-sm">{product.brand}</span>
+                           {product.padBrand && (
+                             <span className="text-pink-600 text-sm">{product.padBrand}</span>
+                           )}
                            <span className="text-purple-600 text-sm">{product.category}</span>
                            {product.vehicleType && (
                              <span className="text-orange-600 text-sm">{product.vehicleType}</span>
