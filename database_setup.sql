@@ -93,3 +93,44 @@ INSERT INTO products (name, price, originalPrice, brand, category, suitableFor, 
 
 -- نمایش محصولات اضافه شده
 SELECT * FROM products;
+
+-- اضافه کردن ستون badges به جدول products (اگر وجود نداشته باشد)
+ALTER TABLE IF EXISTS products
+  ADD COLUMN IF NOT EXISTS badges JSONB DEFAULT '{"discount": false, "bestseller": false, "new": false}';
+
+-- بروزرسانی محصولات موجود با مقادیر پیش‌فرض badges
+UPDATE products 
+SET badges = '{"discount": false, "bestseller": false, "new": false}' 
+WHERE badges IS NULL;
+
+-- اضافه کردن ایندکس برای جستجوی سریع بر اساس badges
+CREATE INDEX IF NOT EXISTS idx_products_badges ON products USING GIN (badges);
+
+-- اضافه کردن ایندکس برای جستجوی محصولات جدید
+CREATE INDEX IF NOT EXISTS idx_products_new ON products ((badges->>'new')) WHERE (badges->>'new')::boolean = true;
+
+-- اضافه کردن ایندکس برای جستجوی محصولات پرفروش
+CREATE INDEX IF NOT EXISTS idx_products_bestseller ON products ((badges->>'bestseller')) WHERE (badges->>'bestseller')::boolean = true;
+
+-- اضافه کردن ایندکس برای جستجوی محصولات تخفیف‌دار
+CREATE INDEX IF NOT EXISTS idx_products_discount ON products ((badges->>'discount')) WHERE (badges->>'discount')::boolean = true;
+
+-- ------------------------------------------------------------
+-- جدول ثبت درخواست‌های OTP برای احراز هویت پیامکی
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS otp_requests (
+    id BIGSERIAL PRIMARY KEY,
+    phone TEXT NOT NULL,
+    hashed_code TEXT NOT NULL,
+    channel TEXT DEFAULT 'sms',
+    metadata JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    consumed_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX IF NOT EXISTS idx_otp_requests_phone ON otp_requests(phone);
+CREATE INDEX IF NOT EXISTS idx_otp_requests_created_at ON otp_requests(created_at);
+CREATE INDEX IF NOT EXISTS idx_otp_requests_consumed ON otp_requests(consumed_at);
+
+-- برای این جدول RLS فعال نمی‌شود؛ دسترسی فقط از طریق Service Role انجام می‌گیرد.

@@ -72,19 +72,19 @@ const AboutSection = () => {
             
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <div className="text-3xl font-bold mb-2">10+</div>
+                <div className="text-3xl font-bold mb-2">۱۰+</div>
                 <div className="text-blue-100 text-sm">سال تجربه</div>
               </div>
               <div>
-                <div className="text-3xl font-bold mb-2">50K+</div>
+                <div className="text-3xl font-bold mb-2">۲۰۰۰+</div>
                 <div className="text-blue-100 text-sm">مشتری راضی</div>
               </div>
               <div>
-                <div className="text-3xl font-bold mb-2">100+</div>
+                <div className="text-3xl font-bold mb-2">۱۰۰+</div>
                 <div className="text-blue-100 text-sm">نوع محصول</div>
               </div>
               <div>
-                <div className="text-3xl font-bold mb-2">24/7</div>
+                <div className="text-3xl font-bold mb-2">۲۴/۷</div>
                 <div className="text-blue-100 text-sm">پشتیبانی</div>
               </div>
             </div>

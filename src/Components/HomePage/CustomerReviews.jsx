@@ -1,7 +1,22 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import StarIcon from '@mui/icons-material/Star';
+import { useAuth } from '../Common/AuthContext';
 
 const CustomerReviews = () => {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+
+  const handleReviewClick = () => {
+    if (!isAuthenticated) {
+      navigate('/register');
+    } else {
+      // Here you can add logic for authenticated users to submit reviews
+      // For now, we'll just show an alert
+      alert('برای ثبت نظر، لطفاً با پشتیبانی تماس بگیرید.');
+    }
+  };
+
   const reviews = [
     {
       id: 1,
@@ -49,7 +64,6 @@ const CustomerReviews = () => {
           {reviews.map((review) => (
             <div key={review.id} className="bg-gray-50 rounded-lg p-6 hover:shadow-lg transition-shadow duration-300">
               <div className="text-center mb-4">
-                <div className="text-4xl mb-2">{review.avatar}</div>
                 <div className="flex justify-center mb-2">
                   {[...Array(5)].map((_, i) => (
                     <StarIcon 
@@ -73,7 +87,10 @@ const CustomerReviews = () => {
         </div>
         
         <div className="text-center mt-8">
-          <button className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+          <button 
+            onClick={handleReviewClick}
+            className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+          >
             ثبت نظر جدید
           </button>
         </div>

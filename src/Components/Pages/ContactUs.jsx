@@ -1,8 +1,12 @@
 import React from 'react';
+import Breadcrumbs from '../Common/Breadcrumbs';
 
 const ContactUs = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      {/* Breadcrumbs */}
+      <Breadcrumbs />
+      
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-16">
@@ -154,12 +158,65 @@ const ContactUs = () => {
           </div>
         </div>
 
-        {/* Map Section */}
+        {/* Map Section - نقشه دقیق کوشش ۲۹ */}
         <div className="mt-16">
           <div className="bg-white rounded-lg shadow-lg p-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">موقعیت ما روی نقشه</h2>
-            <div className="bg-gray-200 h-64 rounded-lg flex items-center justify-center">
-              <p className="text-gray-600">نقشه گوگل در اینجا قرار می‌گیرد</p>
+            
+            {/* نقشه گوگل - موقعیت دقیق کوشش ۲۹ در مشهد */}
+            <div className="relative h-96 rounded-lg overflow-hidden shadow-lg mb-6">
+              <iframe
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d201.07575666831508!2d59.600924141487376!3d36.25862910928231!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3f6c974f8cc76831%3A0xc0afc9e5a45123df!2z2YHYsdmI2LTar9in2Ycg2YTZhtiqINi02LnYqNin2YbbjA!5e0!3m2!1sen!2sus!4v1755768464073!5m2!1sen!2sus"
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                allowFullScreen=""
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title="موقعیت لنت شاپ در مشهد - بلوار کوشش - کوشش ۲۹"
+                className="w-full h-full"
+              ></iframe>
+              
+              {/* Overlay با اطلاعات آدرس */}
+              <div className="absolute top-4 right-4 bg-white bg-opacity-95 rounded-lg p-4 shadow-lg max-w-xs">
+                <h3 className="font-bold text-gray-900 mb-2">آدرس ما</h3>
+                <p className="text-sm text-gray-700 mb-2">مشهد - بلوار کوشش - کوشش ۲۹</p>
+                <p className="text-xs text-gray-500">لنت شاپ - فروشگاه تخصصی لنت ترمز خودرو</p>
+              </div>
+            </div>
+            
+            {/* دکمه‌های مسیریابی */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <a
+                href="https://www.google.com/maps/dir//مشهد+بلوار+کوشش+کوشش+۲۹"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 4m0 13V4m0 0L9 7" />
+                </svg>
+                مسیریابی در گوگل مپس
+              </a>
+              
+              <a
+                href="https://maps.apple.com/?daddr=مشهد+بلوار+کوشش+کوشش+۲۹"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors font-medium"
+              >
+                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 4m0 13V4m0 0L9 7" />
+                </svg>
+                مسیریابی در نقشه اپل
+              </a>
+            </div>
+            
+            {/* اطلاعات اضافی */}
+            <div className="mt-6 text-center">
+              <p className="text-gray-600 text-sm">
+                برای دسترسی آسان‌تر، می‌توانید از دکمه‌های بالا برای مسیریابی استفاده کنید
+              </p>
             </div>
           </div>
         </div>

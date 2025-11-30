@@ -1,6 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { formatPriceWithUnit } from '../../lib/utils';
+import { useCart } from './CartContext';
+import Button from './Button';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import InfoIcon from '@mui/icons-material/Info';
 
 const ProductCard = ({ product, brandSlug }) => {
   // تبدیل brandSlug به نام فارسی برای مسیر
@@ -33,14 +37,24 @@ const ProductCard = ({ product, brandSlug }) => {
   const brandSlugForRoute = getBrandSlug(product.brand);
   const padBrand = product.padBrand || product.padbrand || null;
 
+  const { addToCart, openCart } = useCart();
+
+  const handleAdd = () => {
+    addToCart(product, 1);
+    openCart();
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden border border-blue-200 flex flex-col h-full">
       {/* تصویر محصول */}
-      <div className="h-40 bg-gray-200 flex items-center justify-center flex-shrink-0">
+      <div className="scale-90 bg-gray-50 flex items-center justify-center flex-shrink-0 relative">
         {product.image ? (
           <img 
             src={product.image} 
             alt={product.name}
+            loading="lazy"
+            decoding="async"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
             className="w-full h-full object-cover"
             onError={(e) => {
               e.target.style.display = 'none';
@@ -48,14 +62,35 @@ const ProductCard = ({ product, brandSlug }) => {
             }}
           />
         ) : null}
-        <span className="text-gray-500 text-lg" style={{ display: product.image ? 'none' : 'flex' }}>
+        <span className="text-gray-500 text-sm" style={{ display: product.image ? 'none' : 'flex' }}>
           تصویر {product.name}
         </span>
+        
+        {/* Badges */}
+        {product.badges && (
+          <div className="absolute top-2 right-2 flex flex-col gap-1">
+            {product.badges.new && (
+              <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full font-bold shadow-md">
+                جدید
+              </span>
+            )}
+            {product.badges.bestseller && (
+              <span className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full font-bold shadow-md">
+                پرفروش
+              </span>
+            )}
+            {product.badges.discount && (
+              <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-bold shadow-md">
+                تخفیف
+              </span>
+            )}
+          </div>
+        )}
       </div>
       
       <div className="p-5 flex flex-col flex-1">
         {/* نام محصول */}
-        <h3 className="text-xl font-bold text-gray-800 mb-3 text-center min-h-[3rem] flex items-center justify-center leading-tight">
+        <h3 className="text-md font-bold text-gray-800 mb-3 text-center min-h-[3rem] flex items-center justify-center leading-tight">
           {product.name}
         </h3>
         
@@ -91,15 +126,22 @@ const ProductCard = ({ product, brandSlug }) => {
         
         {/* دکمه‌ها */}
         <div className="mt-auto">
-          <div className="grid grid-cols-4 gap-2">
-            <button className="col-span-2 bg-blue-600 text-white py-2 px-1 rounded-lg hover:bg-blue-700 transition-colors duration-300 font-semibold text-sm">
+          <div className="flex gap-2">
+            <Button 
+              onClick={handleAdd}
+              variant="primary"
+              size="sm"
+              className="flex-1 text-xs px-2"
+              icon={ShoppingCartIcon}
+            >
               افزودن به سبد خرید
-            </button>
+            </Button>
             <Link 
               to={`/product/${brandSlugForRoute}/${product.id}`}
-              className="col-span-2 bg-gray-100 text-gray-700 py-1 px-2 rounded-lg hover:bg-gray-200 transition-colors duration-300 font-semibold border border-gray-300 text-sm flex items-center justify-center"
+              className="flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-gray-50 hover:bg-gray-100 text-gray-700 hover:text-gray-900 transition-all duration-200 border border-gray-200 hover:border-gray-300 font-semibold text-sm"
             >
-              مشخصات کالا
+              <InfoIcon className="w-4 h-4" />
+              مشخصات
             </Link>
           </div>
         </div>

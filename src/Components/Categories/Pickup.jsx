@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { supabase } from '../../lib/supabase';
 import ProductCard from '../Common/ProductCard';
 
@@ -16,11 +17,11 @@ const Pickup = () => {
       setLoading(true);
       setError(null);
       
-      // دریافت محصولات با نوع خودرو "دیزل"
+      // دریافت محصولات با نوع خودرو "وانت"
       const { data, error: supabaseError } = await supabase
         .from('products')
         .select('*')
-        .eq('vehicleType', 'دیزل')
+        .eq('vehicleType', 'وانت')
         .order('created_at', { ascending: false });
 
       if (supabaseError) {
@@ -40,7 +41,7 @@ const Pickup = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-xl">در حال بارگذاری محصولات دیزل...</div>
+        <div className="text-xl">در حال بارگذاری محصولات وانت...</div>
       </div>
     );
   }
@@ -62,16 +63,26 @@ const Pickup = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
+      <Helmet>
+        <title>لنت خودروهای وانت | خرید لنت ترمز وانت و پیکاپ | لنت شاپ</title>
+        <meta name="description" content="خرید لنت ترمز برای خودروهای وانت و پیکاپ - لنت جلو، لنت عقب، لنت دستی و لنت پا. بهترین قیمت و کیفیت تضمینی. ارسال سریع به سراسر کشور." />
+        <meta name="keywords" content="لنت وانت, لنت پیکاپ, لنت ترمز وانت, لنت نیسان دیزل, لنت تویوتا هیلوکس, لنت وانت دیزلی" />
+        <meta property="og:title" content="لنت خودروهای وانت | لنت شاپ" />
+        <meta property="og:description" content="خرید لنت ترمز برای خودروهای وانت با بهترین قیمت و کیفیت" />
+        <meta property="og:url" content="https://lent-shop.ir/pickup" />
+        <link rel="canonical" href="https://lent-shop.ir/pickup" />
+      </Helmet>
+      <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">
             <h1 className="text-3xl font-bold text-gray-900 mb-4">
-              محصولات خودروهای دیزل
+              محصولات خودروهای وانت
             </h1>
             <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-              بهترین لنت‌های ترمز برای خودروهای دیزل با کیفیت تضمینی
+              بهترین لنت‌های ترمز برای خودروهای وانت با کیفیت تضمینی
             </p>
           </div>
         </div>
@@ -82,7 +93,7 @@ const Pickup = () => {
         {products.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-gray-500 text-lg mb-4">
-              هیچ محصولی برای خودروهای دیزل یافت نشد
+              هیچ محصولی برای خودروهای وانت یافت نشد
             </div>
             <p className="text-gray-400 text-sm">
               محصولات جدید به زودی اضافه خواهند شد
@@ -109,6 +120,7 @@ const Pickup = () => {
         )}
       </div>
     </div>
+    </>
   );
 };
 

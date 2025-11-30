@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { supabase } from '../../lib/supabase';
+import Breadcrumbs from '../Common/Breadcrumbs';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -27,21 +29,49 @@ const Login = () => {
     setError('');
 
     try {
-      // TODO: Implement actual authentication logic with Supabase
-      // For now, we'll simulate a login process
+      // Allow previous test admin credentials as a local fallback (hidden from UI)
       if (formData.email === 'admin@lentshop.com' && formData.password === 'admin123') {
-        // Store admin session
-        localStorage.setItem('adminToken', 'dummy-token');
+        localStorage.setItem('adminToken', 'local-admin');
         localStorage.setItem('adminUser', JSON.stringify({
-          id: 1,
+          id: 'local-admin',
           email: formData.email,
           name: 'مدیر سیستم'
         }));
-        
-        // Redirect to admin panel
         navigate('/admin');
-      } else {
+        return;
+      }
+
+      if (!supabase) {
+        setError('سامانه احراز هویت پیکربندی نشده است.');
+        return;
+      }
+
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password
+      });
+
+      if (authError) {
         setError('ایمیل یا رمز عبور اشتباه است');
+        return;
+      }
+
+      if (data?.session && data?.user) {
+        const email = (data.user.email || '').toLowerCase();
+        if (email === 'admin@lentshop.com') {
+          localStorage.setItem('adminToken', data.session.access_token || 'supabase-session');
+          localStorage.setItem('adminUser', JSON.stringify({
+            id: data.user.id,
+            email: data.user.email,
+            name: data.user.user_metadata?.full_name || 'کاربر'
+          }));
+          navigate('/admin');
+        } else {
+          setError('دسترسی به پنل ادمین مجاز نیست');
+          try { await supabase.auth.signOut(); } catch {}
+        }
+      } else {
+        setError('ورود ناموفق بود. لطفاً دوباره تلاش کنید.');
       }
     } catch (err) {
       setError('خطا در ورود به سیستم. لطفاً دوباره تلاش کنید.');
@@ -52,6 +82,9 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
+      {/* Breadcrumbs */}
+      <Breadcrumbs />
+      
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
@@ -78,7 +111,7 @@ const Login = () => {
                 onChange={handleChange}
                 required
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-right"
-                placeholder="admin@lentshop.com"
+                placeholder="ایمیل خود را وارد کنید"
                 dir="ltr"
               />
             </div>
@@ -137,14 +170,7 @@ const Login = () => {
             </button>
           </form>
 
-          {/* Demo Credentials */}
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <h4 className="text-sm font-medium text-blue-800 mb-2">اطلاعات تست:</h4>
-            <div className="text-xs text-blue-600 space-y-1">
-              <p>ایمیل: admin@lentshop.com</p>
-              <p>رمز عبور: admin123</p>
-            </div>
-          </div>
+          {/* Demo credentials removed for security */}
 
           {/* Links */}
           <div className="mt-6 text-center">

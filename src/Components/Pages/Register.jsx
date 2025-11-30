@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { supabase } from '../../lib/supabase';
+import Breadcrumbs from '../Common/Breadcrumbs';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -57,27 +59,28 @@ const Register = () => {
     setError('');
 
     try {
-      // TODO: Implement actual registration logic with Supabase
-      // For now, we'll simulate a registration process
-      
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Store admin session (in real app, this would come from backend)
-      localStorage.setItem('adminToken', 'dummy-token');
-      localStorage.setItem('adminUser', JSON.stringify({
-        id: Date.now(),
+      if (!supabase) {
+        setError('سامانه ثبت‌نام پیکربندی نشده است.');
+        return;
+      }
+
+      const { error: signUpError } = await supabase.auth.signUp({
         email: formData.email,
-        name: formData.name,
-        phone: formData.phone
-      }));
-      
-      setSuccess('ثبت‌نام با موفقیت انجام شد! در حال انتقال به پنل ادمین...');
-      
-      // Redirect to admin panel after 2 seconds
+        password: formData.password,
+        options: {
+          data: { full_name: formData.name, phone: formData.phone }
+        }
+      });
+
+      if (signUpError) {
+        setError(signUpError.message || 'خطا در ثبت‌نام.');
+        return;
+      }
+
+      setSuccess('ثبت‌نام با موفقیت انجام شد! لطفاً ایمیل خود را تأیید کرده و سپس وارد شوید.');
       setTimeout(() => {
-        navigate('/admin');
-      }, 2000);
+        navigate('/login');
+      }, 1500);
       
     } catch (err) {
       setError('خطا در ثبت‌نام. لطفاً دوباره تلاش کنید.');
@@ -88,6 +91,9 @@ const Register = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
+      {/* Breadcrumbs */}
+      <Breadcrumbs />
+      
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="text-center mb-8">

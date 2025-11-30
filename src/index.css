@@ -1,3 +1,56 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* جلوگیری از اسکرول افقی در کل صفحه */
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Brands carousel: thinner, more transparent horizontal scrollbar */
+#brands-carousel {
+	scrollbar-width: thin; /* Firefox */
+	scrollbar-color: rgba(100,116,139,0.1) transparent; /* 50% reduced opacity */
+	max-width: 100%;
+	overflow-x: auto;
+}
+#brands-carousel:hover {
+	scrollbar-color: rgba(100,116,139,0.2) transparent; /* slightly more visible on hover */
+}
+#brands-carousel::-webkit-scrollbar {
+	height: 3px; /* half the thickness */
+}
+#brands-carousel::-webkit-scrollbar-track {
+	background: transparent;
+}
+#brands-carousel::-webkit-scrollbar-thumb {
+	background-color: rgba(100,116,139,0.1); /* 50% reduced opacity */
+	border-radius: 9999px;
+}
+#brands-carousel:hover::-webkit-scrollbar-thumb {
+	background-color: rgba(100,116,139,0.2);
+}
+
+/* کلاس scrollbar-hide برای مخفی کردن scrollbar */
+.scrollbar-hide {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+/* بهینه‌سازی موبایل */
+@media (max-width: 768px) {
+  #brands-carousel {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+  }
+  
+  #brands-carousel::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+  }
+}

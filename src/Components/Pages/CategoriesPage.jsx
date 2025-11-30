@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { getBrandImage } from '../../lib/utils';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import TwoWheelerIcon from '@mui/icons-material/TwoWheeler';
+import Breadcrumbs from '../Common/Breadcrumbs';
 
 const CategoriesPage = () => {
   const [brands, setBrands] = useState([]);
@@ -12,6 +15,44 @@ const CategoriesPage = () => {
 
   useEffect(() => {
     fetchBrands();
+    
+    // تست ساختار جدول brands
+    const testBrandsTable = async () => {
+      try {
+        const { data: testData, error: testError } = await supabase
+          .from('brands')
+          .select('*')
+          .limit(1);
+        
+        if (!testError && testData && testData.length > 0) {
+          console.log('Brands table structure:', Object.keys(testData[0]));
+          console.log('Sample brand data:', testData[0]);
+        }
+      } catch (error) {
+        console.error('Error testing brands table:', error);
+      }
+    };
+    
+    testBrandsTable();
+    
+    // Real-time subscription برای برندها
+    if (supabase) {
+      const channel = supabase
+        .channel('categories_brands_changes')
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'brands' }, 
+          (payload) => {
+            console.log('Real-time brand change in CategoriesPage:', payload);
+            // بروزرسانی خودکار لیست برندها
+            fetchBrands();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, []);
 
   const normalizeBrandName = (name) => (name || '').replace(/\u200c/g, ' ').replace(/\s+/g, ' ').trim();
@@ -24,29 +65,6 @@ const CategoriesPage = () => {
         .select('*')
         .order('name');
 
-      const imageMap = {
-        'سایپا': '/saipa.png',
-        'ایران خودرو': '/irankhodro.png',
-        'پژو': '/peugeot.png',
-        'هیوندای': '/hyun.png',
-        'نیسان': '/nissan.png',
-        'تویوتا': '/toyota.png',
-        'لکسوس': '/lexus.png',
-        'کیا': '/kia.png',
-        'جیلی': '/geely.png',
-        'مزدا': '/mazda.png',
-        'ام‌جی': '/mg.png',
-        'ام جی': '/mg.png',
-        'میتسوبیشی': '/mitsubishi.png',
-        'فولکس‌واگن': '/volkswagen.png',
-        'فولکس واگن': '/volkswagen.jpg',
-        'سوزوکی': '/suzuki.png',
-        'رنو': '/renault.png',
-        'فاو': '/faw.png',
-        'جی‌ای‌سی': '/jac.png',
-        'جک': '/jac.png'
-      };
-
       if (error) {
         console.error('Error fetching brands:', error);
         // Fallback to hardcoded brands
@@ -58,37 +76,47 @@ const CategoriesPage = () => {
           { id: 5, name: 'لکسوس', description: 'برند لکسوس' },
           { id: 6, name: 'جیلی', description: 'برند جیلی' },
           { id: 7, name: 'مزدا', description: 'برند مزدا' },
-          { id: 8, name: 'ام‌جی', description: 'برند ام‌جی' },
-          { id: 9, name: 'میتسوبیشی', description: 'برند میتسوبیشی' },
-          { id: 10, name: 'فولکس‌واگن', description: 'برند فولکس‌واگن' },
-          { id: 11, name: 'سایپا', description: 'برند سایپا' },
-          { id: 12, name: 'سوزوکی', description: 'برند سوزوکی' },
-          { id: 13, name: 'رنو', description: 'برند رنو' },
-          { id: 14, name: 'پژو', description: 'برند پژو' },
-          { id: 15, name: 'ایران خودرو', description: 'برند ایران خودرو' },
-          { id: 16, name: 'فاو', description: 'برند فاو' },
-          { id: 17, name: 'جی‌ای‌سی', description: 'برند جی‌ای‌سی' }
+          { id: 8, name: 'میتسوبیشی', description: 'برند میتسوبیشی' },
+          { id: 9, name: 'سایپا', description: 'برند سایپا' },
+          { id: 10, name: 'سوزوکی', description: 'برند سوزوکی' },
+          { id: 11, name: 'رنو', description: 'برند رنو' },
+          { id: 12, name: 'پژو', description: 'برند پژو' },
+          { id: 13, name: 'ایران خودرو', description: 'برند ایران خودرو' },
+          { id: 14, name: 'فاو', description: 'برند فاو' },
+          { id: 15, name: 'فولکس‌واگن', description: 'برند فولکس‌واگن' }, // کنار فاو
+          { id: 16, name: 'ام‌جی', description: 'برند ام‌جی' }, // از سمت راست سوم
+          { id: 17, name: 'چانگان', description: 'برند چانگان' },
+          { id: 18, name: 'آمیکو', description: 'برند آمیکو' },
+          { id: 19, name: 'برلیانس', description: 'برند برلیانس' },
+          { id: 20, name: 'بنز', description: 'برند مرسدس بنز' },
+          { id: 21, name: 'بی‌ام‌دبلیو', description: 'برند بی‌ام‌دبلیو' }
         ];
         const mapped = fallback.map((b) => {
           const n = normalizeBrandName(b.name);
           return {
             id: b.id,
             name: b.name,
-            image: imageMap[n] || '/default-brand.png',
+            image: getBrandImage(n), // استفاده از سیستم متمرکز
             slug: getBrandSlug(n)
           };
         });
         setBrands(mapped);
       } else {
+        console.log('Brands data from database:', data);
         const mapped = (data || []).map((b) => {
           const n = normalizeBrandName(b.name);
+          console.log(`Brand: ${b.name}, DB Image: ${b.image}`);
           return {
             id: b.id,
             name: b.name,
-            image: imageMap[n] || '/default-brand.png',
+            // فقط از تصویر دیتابیس استفاده کن
+            image: b.image,
             slug: getBrandSlug(n)
           };
         });
+        
+        console.log('Mapped brands:', mapped);
+        // نمایش همه برندها بدون فیلتر کردن
         setBrands(mapped);
       }
     } catch (error) {
@@ -119,8 +147,14 @@ const CategoriesPage = () => {
       'پژو': 'peugeot',
       'ایران خودرو': 'irankhodro',
       'فاو': 'faw',
-      'جی‌ای‌سی': 'jac',
-      'جک': 'jac'
+      // برندهای جدید اضافه شده
+      'چانگان': 'changan',
+      'آمیکو': 'amico',
+      'برلیانس': 'brilliance',
+      'بنز': 'benz',
+      'مرسدس': 'benz',
+      'مرسدس بنز': 'benz',
+      'بی‌ام‌دبلیو': 'bmw'
     };
     return brandMap[brandName] || brandName.toLowerCase();
   };
@@ -146,8 +180,8 @@ const CategoriesPage = () => {
     },
     {
       id: 'pickup',
-      name: 'دیزل',
-      description: 'خودروهای دیزل و پیکاپ',
+      name: 'وانت',
+      description: 'خودروهای وانت و پیکاپ',
       icon: <TwoWheelerIcon className="text-4xl text-orange-600" />,
       link: '/pickup',
       color: 'from-orange-500 to-orange-600'
@@ -166,11 +200,39 @@ const CategoriesPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <>
+      <Helmet>
+        <title>دسته‌بندی‌ها و برندها | تمام برندهای لنت ترمز | لنت شاپ</title>
+        <meta name="description" content="دسته‌بندی کامل محصولات لنت شاپ - لنت خودروهای سواری، شاسی بلند و وانت. تمام برندهای معتبر لنت ترمز با بهترین قیمت و کیفیت." />
+        <meta name="keywords" content="دسته‌بندی لنت, برندهای لنت, لنت تویوتا, لنت هیوندای, لنت نیسان, لنت کیا, دسته‌بندی محصولات" />
+        <meta property="og:title" content="دسته‌بندی‌ها و برندها | لنت شاپ" />
+        <meta property="og:description" content="دسته‌بندی کامل محصولات لنت ترمز برای تمام برندها و انواع خودرو" />
+        <meta property="og:url" content="https://lent-shop.ir/categories" />
+        <link rel="canonical" href="https://lent-shop.ir/categories" />
+      </Helmet>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {/* Breadcrumbs */}
+      <Breadcrumbs />
+      
       {/* Header */}
       <div className="bg-white shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
+          {/* Mobile Layout - Stacked */}
+          <div className="block sm:hidden">
+            <div className="flex justify-center mb-4">
+              <Link
+                to="/"
+                className="flex items-center text-gray-600 hover:text-blue-600 transition-colors duration-200"
+              >
+                <ArrowBackIcon className="ml-2" />
+                <span className="text-lg font-medium">بازگشت به خانه</span>
+              </Link>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-800 text-center">دسترسی سریع به دسته‌بندی‌ها</h1>
+          </div>
+          
+          {/* Desktop Layout - Horizontal */}
+          <div className="hidden sm:flex items-center justify-between">
             <Link
               to="/"
               className="flex items-center text-gray-600 hover:text-blue-600 transition-colors duration-200"
@@ -237,7 +299,7 @@ const CategoriesPage = () => {
               {filteredBrands.map((brand) => (
                 <Link
                   key={brand.id}
-                  to={`/brands/${brand.slug || getBrandSlug(brand.name)}`}
+                  to={`/brand-products/${brand.slug || getBrandSlug(brand.name)}`}
                   className="group block"
                 >
                   <div className="bg-white rounded-xl p-6 text-center shadow-lg hover:shadow-2xl transform transition-all duration-300 group-hover:scale-105 border border-gray-100">
@@ -246,7 +308,10 @@ const CategoriesPage = () => {
                         src={brand.image}
                         alt={brand.name}
                         className="w-16 h-16 object-contain"
-                        onError={(e) => { e.currentTarget.src = '/default-brand.png'; }}
+                        onError={(e) => { 
+                          console.log(`Error loading image for ${brand.name}, using fallback`);
+                          e.currentTarget.src = '/WEBP/geely.webp'; 
+                        }}
                       />
                     </div>
                     <h4 className="text-sm font-semibold text-gray-800 mb-2 leading-tight">
@@ -281,6 +346,7 @@ const CategoriesPage = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

@@ -1,160 +1,135 @@
-import React from 'react';
-import StarIcon from '@mui/icons-material/Star';
-import FavoriteIcon from '@mui/icons-material/Favorite';
+import React, { useState, useEffect } from 'react';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
-import VisibilityIcon from '@mui/icons-material/Visibility';
 import { formatPrice } from '../../lib/utils';
+import { useCart } from '../Common/CartContext';
+import { Link } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
 
 const FeaturedProducts = () => {
-  const featuredProducts = [
-    {
-      id: 1,
-      name: "لنت جلو سایپا 131 - نسخه جدید",
-      price: "520,000",
-      originalPrice: "650,000",
-      discount: "20%",
-      image: "/saipa.png",
-      isNew: true,
-      isFeatured: true,
-      rating: 4.8,
-      reviews: 45,
-      badge: "جدید"
-    },
-    {
-      id: 2,
-      name: "لنت عقب پژو 206 - کیفیت برتر",
-      price: "480,000",
-      originalPrice: "580,000",
-      discount: "17%",
-      image: "/peugeot.png",
-      isNew: false,
-      isFeatured: true,
-      rating: 4.6,
-      reviews: 32,
-      badge: "پرفروش"
-    },
-    {
-      id: 3,
-      name: "لنت جلو تویوتا کمری - نسخه 2024",
-      price: "780,000",
-      originalPrice: "780,000",
-      discount: "0%",
-      image: "/toyota.png",
-      isNew: true,
-      isFeatured: true,
-      rating: 4.9,
-      reviews: 67,
-      badge: "جدید"
-    },
-    {
-      id: 4,
-      name: "لنت عقب هیوندای آوانته - سری جدید",
-      price: "520,000",
-      originalPrice: "620,000",
-      discount: "16%",
-      image: "/hyun.png",
-      isNew: false,
-      isFeatured: true,
-      rating: 4.5,
-      reviews: 28,
-      badge: "تخفیف"
-    }
-  ];
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchFeaturedProducts = async () => {
+      try {
+        setLoading(true);
+        // فقط 4 محصول آخرین که badges گرفته‌اند برای نمایش در صفحه اصلی
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .or('badges->>new.eq.true,badges->>bestseller.eq.true,badges->>discount.eq.true')
+          .limit(4)
+          .order('updated_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching featured products:', error);
+          setFeaturedProducts([]);
+        } else {
+          setFeaturedProducts(data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching featured products:', error);
+        setFeaturedProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeaturedProducts();
+  }, []);
+
+  const { addToCart, openCart } = useCart();
+
+  const toProduct = (p) => ({ id: p.id, name: p.name, price: p.price, image: p.image });
 
   return (
-    <div className="w-full py-8 sm:py-12 lg:py-16 bg-gradient-to-br from-gray-50 to-blue-50">
+    <div className="w-full">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-8 sm:mb-10 lg:mb-12">
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-3 sm:mb-4">محصولات ویژه و جدید</h2>
-          <p className="text-sm sm:text-base text-gray-600">بهترین و جدیدترین محصولات ما را از دست ندهید</p>
-        </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-          {featuredProducts.map((product) => (
-            <div key={product.id} className="group bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden transform hover:-translate-y-2">
-              {/* تصویر محصول */}
-              <div className="relative overflow-hidden">
-                <img 
-                  src={product.image} 
-                  alt={product.name}
-                  className="w-full h-32 sm:h-40 md:h-48 object-contain p-3 sm:p-4 bg-gradient-to-br from-gray-100 to-gray-200 group-hover:scale-110 transition-transform duration-300"
-                />
-                
-                {/* Badge */}
-                <div className="absolute top-2 sm:top-3 right-2 sm:right-3">
-                  <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-bold text-white ${
-                    product.badge === "جدید" ? "bg-green-500" :
-                    product.badge === "پرفروش" ? "bg-orange-500" :
-                    "bg-red-500"
-                  }`}>
-                    {product.badge}
-                  </span>
+                                   {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+              {[...Array(4)].map((_, index) => (
+                <div key={index} className="bg-white rounded-xl shadow-lg p-3 sm:p-4 animate-pulse">
+                  <div className="h-32 sm:h-40 lg:h-48 bg-gray-200 rounded mb-3 sm:mb-4"></div>
+                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded mb-2 w-3/4"></div>
+                  <div className="h-8 bg-gray-200 rounded"></div>
                 </div>
-                
-                {/* دکمه‌های عملیات */}
-                <div className="absolute top-2 sm:top-3 left-2 sm:left-3 flex flex-col gap-1 sm:gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <button className="w-6 h-6 sm:w-8 sm:h-8 bg-white rounded-full shadow-md hover:bg-red-50 transition-colors flex items-center justify-center">
-                    <FavoriteIcon className="text-gray-600 text-xs sm:text-sm" />
-                  </button>
-                  <button className="w-6 h-6 sm:w-8 sm:h-8 bg-white rounded-full shadow-md hover:bg-blue-50 transition-colors flex items-center justify-center">
-                    <VisibilityIcon className="text-gray-600 text-xs sm:text-sm" />
-                  </button>
-                </div>
-              </div>
-              
-              {/* محتوای محصول */}
-              <div className="p-3 sm:p-4">
-                <h3 className="font-semibold text-gray-800 mb-2 text-xs sm:text-sm leading-tight group-hover:text-blue-600 transition-colors">
-                  {product.name}
-                </h3>
-                
-                {/* امتیاز */}
-                <div className="flex items-center mb-2 sm:mb-3">
-                  <div className="flex text-yellow-400">
-                    {[...Array(5)].map((_, i) => (
-                      <StarIcon 
-                        key={i} 
-                        className={`text-xs sm:text-sm ${i < Math.floor(product.rating) ? "text-yellow-400" : "text-gray-300"}`} 
-                      />
-                    ))}
-                  </div>
-                  <span className="text-xs text-gray-500 mr-2">({product.reviews})</span>
-                </div>
-                
-                {/* قیمت */}
-                <div className="flex items-center justify-between mb-3 sm:mb-4">
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    {product.discount !== "0%" ? (
-                      <>
-                        <span className="text-base sm:text-lg font-bold text-red-600">{formatPrice(product.price)}</span>
-                        <span className="text-xs sm:text-sm text-gray-500 line-through">{formatPrice(product.originalPrice)}</span>
-                      </>
-                    ) : (
-                      <span className="text-base sm:text-lg font-bold text-gray-800">{formatPrice(product.price)}</span>
-                    )}
-                  </div>
-                  {product.discount !== "0%" && (
-                    <span className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full font-semibold">
-                      {product.discount} تخفیف
-                    </span>
+              ))}
+            </div>
+         ) : featuredProducts.length > 0 ? (
+                      <div className="flex flex-col w-[250px] mx-auto sm:grid sm:grid-cols-2 sm:w-[90%] md:grid-cols-3 md:w-[100%] lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+            {featuredProducts.map((product) => (
+                                       <Link to={`/product/${product.id}`} key={product.id} className="bg-white rounded-xl shadow-lg overflow-hidden border border-blue-100 flex flex-col hover:shadow-xl transition-all duration-300 transform hover:scale-105 cursor-pointer">
+                <div className="h-[15rem] md:h-60 lg:h-64 bg-gray-50 flex items-center justify-center relative">
+                  {product.image ? (
+                    <img 
+                      src={product.image} 
+                      alt={product.name}
+                      loading="lazy"
+                      decoding="async"
+                      className="-z-1 h-[100%] w-[100%] sm:h-[15rem] sm:w-[17rem] md:h-[15rem] lg:h-[15rem] xl:h-64 object-cover"
+                    />
+                  ) : (
+                    <span className="text-gray-400 text-sm sm:text-base">بدون تصویر</span>
+                  )}
+                  
+                  {/* نمایش نشان‌ها */}
+                  {product.badges && (
+                    <div className="absolute top-2 right-2 sm:top-3 sm:right-3 flex flex-col gap-1">
+                      {product.badges.new && (
+                        <span className="bg-green-500 text-white text-xs sm:text-sm px-2 py-1 rounded-full font-bold shadow-md">
+                          جدید
+                        </span>
+                      )}
+                      {product.badges.bestseller && (
+                        <span className="bg-orange-500 text-white text-xs sm:text-sm px-2 py-1 rounded-full font-bold shadow-md">
+                          پرفروش
+                        </span>
+                      )}
+                      {product.badges.discount && (
+                        <span className="bg-red-500 text-white text-xs sm:text-sm px-2 py-1 rounded-full font-bold shadow-md">
+                          تخفیف
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
-                
-                {/* دکمه خرید */}
-                <button className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-2 sm:py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 flex items-center justify-center gap-2 font-semibold group-hover:shadow-lg text-sm sm:text-base">
-                  <ShoppingCartIcon className="text-sm" />
-                  افزودن به سبد خرید
-                </button>
-              </div>
-            </div>
+                <div className="p-3 sm:p-4 flex-1 flex flex-col">
+                  <h3 className="font-bold text-gray-800 mb-2 sm:mb-3 sm:mt-3 text-center line-clamp-2 text-xs sm:text-base lg:text-lg">{product.name}</h3>
+                  <div className="text-center mb-2 sm:mb-3">
+                    <span className="text-blue-600 font-extrabold text-sm sm:text-base lg:text-lg">{formatPrice(product.price)}تومان</span>
+                    {product.originalPrice && product.originalPrice !== product.price && (
+                      <span className="text-red-500 line-through text-xs sm:text-sm font-semibold mr-2 sm:mr-3">{formatPrice(product.originalPrice)}تومان</span>
+                    )}
+                  </div>
+                  <button 
+                    onClick={(e) => { 
+                      e.preventDefault(); 
+                      e.stopPropagation(); 
+                      addToCart(toProduct(product), 1); 
+                      openCart(); 
+                    }} 
+                    className="mt-auto w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-2 sm:py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 flex items-center justify-center gap-2 font-semibold text-sm sm:text-base"
+                  >
+                    <ShoppingCartIcon className="text-sm sm:text-base" />
+                    افزودن به سبد خرید
+                  </button>
+                </div>
+              </Link>
           ))}
         </div>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-gray-500 text-lg">هیچ محصول ویژه‌ای یافت نشد</p>
+          </div>
+        )}
         
         {/* دکمه مشاهده همه */}
         <div className="text-center mt-8 sm:mt-10">
-          <button className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 sm:px-8 py-2 sm:py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl text-sm sm:text-base">
-            مشاهده همه محصولات ویژه
-          </button>
+          <Link to="/specials" className="inline-block bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 sm:px-10 py-3 sm:py-4 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-300 font-bold shadow-lg hover:shadow-xl text-base sm:text-lg transform hover:scale-105">
+            مشاهده همه محصولات ویژه →
+          </Link>
         </div>
       </div>
     </div>

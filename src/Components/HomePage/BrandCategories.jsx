@@ -1,85 +1,25 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import ZoomInIcon from '@mui/icons-material/ZoomIn';
-import PanToolAltOutlinedIcon from '@mui/icons-material/PanToolAltOutlined';
 import { supabase } from '../../lib/supabase';
+import { getBrandImage } from '../../lib/utils';
+import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
+import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 
 const BrandCategories = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showResults, setShowResults] = useState(false);
-  const [filteredCars, setFilteredCars] = useState([]);
   const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(true);
-  const searchRef = useRef(null);
+  const scrollRef = useRef(null);
 
-  // لیست کامل نام ماشین‌ها
-  const allCars = [
-    // سواری
-    { id: 1, name: "سایپا 131", category: "سواری", link: "/vehicle/saipa-131" },
-    { id: 2, name: "سایپا 132", category: "سواری", link: "/vehicle/saipa-132" },
-    { id: 3, name: "سایپا 141", category: "سواری", link: "/vehicle/saipa-141" },
-    { id: 4, name: "سایپا 151", category: "سواری", link: "/vehicle/saipa-151" },
-    { id: 5, name: "سایپا 111", category: "سواری", link: "/vehicle/saipa-111" },
-    { id: 6, name: "پژو 206", category: "سواری", link: "/vehicle/peugeot-206" },
-    { id: 7, name: "پژو 405", category: "سواری", link: "/vehicle/peugeot-405" },
-    { id: 8, name: "پژو 207", category: "سواری", link: "/vehicle/peugeot-207" },
-    { id: 9, name: "پژو 2008", category: "سواری", link: "/vehicle/peugeot-2008" },
-    { id: 10, name: "تویوتا کمری", category: "سواری", link: "/vehicle/toyota-camry" },
-    { id: 11, name: "تویوتا کرولا", category: "سواری", link: "/vehicle/toyota-corolla" },
-    { id: 12, name: "تویوتا پریوس", category: "سواری", link: "/vehicle/toyota-prius" },
-    { id: 13, name: "هیوندای آوانته", category: "سواری", link: "/vehicle/hyundai-avante" },
-    { id: 14, name: "هیوندای اکسنت", category: "سواری", link: "/vehicle/hyundai-accent" },
-    { id: 15, name: "هیوندای i10", category: "سواری", link: "/vehicle/hyundai-i10" },
-    { id: 16, name: "هیوندای i20", category: "سواری", link: "/vehicle/hyundai-i20" },
-    { id: 17, name: "سمند", category: "سواری", link: "/vehicle/samand" },
-    { id: 18, name: "سمند LX", category: "سواری", link: "/vehicle/samand-lx" },
-    { id: 19, name: "سمند EF7", category: "سواری", link: "/vehicle/samand-ef7" },
-    { id: 20, name: "رنو تالیسمان", category: "سواری", link: "/vehicle/renault-talisman" },
-    { id: 21, name: "رنو کولیوس", category: "سواری", link: "/vehicle/renault-captur" },
-    { id: 22, name: "رنو مگان", category: "سواری", link: "/vehicle/renault-megane" },
-    
-    // شاسی بلند
-    { id: 23, name: "جیلی", category: "شاسی بلند", link: "/suv/jili" },
-    { id: 24, name: "نیسان جوک", category: "شاسی بلند", link: "/suv/nissan-juke" },
-    { id: 25, name: "هیوندای توسان", category: "شاسی بلند", link: "/suv/hyundai-tucson" },
-    { id: 26, name: "هیوندای سانتافه", category: "شاسی بلند", link: "/suv/hyundai-santafe" },
-    { id: 27, name: "کیا اسپورتیج", category: "شاسی بلند", link: "/suv/kia-sportage" },
-    { id: 28, name: "کیا سورنتو", category: "شاسی بلند", link: "/suv/kia-sorento" },
-    { id: 29, name: "میتسوبیشی ASX", category: "شاسی بلند", link: "/suv/mitsubishi-asx" },
-    { id: 30, name: "میتسوبیشی اوتلندر", category: "شاسی بلند", link: "/suv/mitsubishi-outlander" },
-    { id: 31, name: "هوندا CR-V", category: "شاسی بلند", link: "/suv/honda-crv" },
-    { id: 32, name: "هوندا HR-V", category: "شاسی بلند", link: "/suv/honda-hrv" },
-    
-    // دیزل و پیکاپ
-    { id: 33, name: "نیسان دیزل", category: "دیزل", link: "/pickup/nissan-diesel" },
-    { id: 34, name: "نیسان ناوارا", category: "دیزل", link: "/pickup/nissan-navara" },
-    { id: 35, name: "تویوتا هیلوکس", category: "دیزل", link: "/pickup/toyota-hilux" },
-    { id: 36, name: "تویوتا لندکروزر", category: "دیزل", link: "/pickup/toyota-landcruiser" },
-    { id: 37, name: "میتسوبیشی L200", category: "دیزل", link: "/pickup/mitsubishi-l200" },
-    { id: 38, name: "فورد رنجر", category: "دیزل", link: "/pickup/ford-ranger" },
-    { id: 39, name: "ایسوزو D-Max", category: "دیزل", link: "/pickup/isuzu-dmax" },
-    { id: 40, name: "مازدا BT-50", category: "دیزل", link: "/pickup/mazda-bt50" }
-  ];
-
-  // دریافت برندها از دیتابیس
   useEffect(() => {
     const fetchBrands = async () => {
       try {
         setLoading(true);
+        
         if (!supabase) {
-          // در صورت عدم تنظیم Supabase، از داده‌های پیش‌فرض استفاده کن
-          setBrands([
-            { id: 1, name: 'سایپا', image: '/saipa.png', slug: getBrandSlug('سایپا') },
-            { id: 2, name: 'ایران خودرو', image: '/irankhodro.png', slug: getBrandSlug('ایران خودرو') },
-            { id: 3, name: 'پژو', image: '/peugeot.png', slug: getBrandSlug('پژو') },
-            { id: 4, name: 'هیوندای', image: '/hyun.png', slug: getBrandSlug('هیوندای') },
-            { id: 5, name: 'نیسان', image: '/nissan.png', slug: getBrandSlug('نیسان') },
-            { id: 6, name: 'تویوتا', image: '/toyota.png', slug: getBrandSlug('تویوتا') },
-            { id: 7, name: 'لکسوس', image: '/lexus.png', slug: getBrandSlug('لکسوس') },
-            { id: 8, name: 'کیا', image: '/kia.png', slug: getBrandSlug('کیا') },
-          ]);
+          console.warn('Supabase not available');
           return;
         }
+        
         const { data, error } = await supabase
           .from('brands')
           .select('*')
@@ -99,44 +39,179 @@ const BrandCategories = () => {
             { id: 8, name: 'کیا', image: '/kia.png', slug: getBrandSlug('کیا') },
           ]);
         } else {
-          // تبدیل نام‌های فارسی به انگلیسی برای URL
-          const brandsWithImages = data.map(brand => {
-            const imageMap = {
-              'سایپا': '/saipa.png',
-              'ایران خودرو': '/irankhodro.png',
-              'پژو': '/peugeot.png',
-              'هیوندای': '/hyun.png',
-              'نیسان': '/nissan.png',
-              'تویوتا': '/toyota.png',
-              'لکسوس': '/lexus.png',
-              'کیا': '/kia.png',
-              'جیلی': '/geely.png',
-              'مزدا': '/mazda.png',
-              'ام‌جی': '/mg.png',
-              'ام جی': '/mg.png',
-              'میتسوبیشی': '/mitsubishi.png',
-              'فولکس‌واگن': '/volkswagen.png',
-              'فولکس واگن': '/volkswagen.jpg',
-              'سوزوکی': '/suzuki.png',
-              'رنو': '/renault.png',
-              'فاو': '/faw.png',
-              'جی‌ای‌سی': '/jac.png',
-              'جک': '/jac.png'
+          // دریافت برندها از جدول brands
+          let allBrands = data || [];
+          
+          // همچنین برندها را از جدول products دریافت کن تا همه برندها نمایش داده شوند
+          try {
+            const { data: productBrands, error: productBrandsError } = await supabase
+              .from('products')
+              .select('brand')
+              .not('brand', 'is', null)
+              .not('brand', 'eq', '');
+            
+            if (!productBrandsError && productBrands) {
+              const uniqueProductBrands = [...new Set(productBrands.map(p => p.brand))];
+              console.log('Brands from products table:', uniqueProductBrands);
+              
+              // اضافه کردن برندهای موجود در محصولات که در جدول brands نیستند
+              const existingBrandNames = allBrands.map(b => b.name);
+              const missingBrands = uniqueProductBrands.filter(brandName => 
+                !existingBrandNames.includes(brandName)
+              );
+              
+              console.log('Missing brands to add:', missingBrands);
+              
+              // اضافه کردن برندهای گمشده
+              missingBrands.forEach(brandName => {
+                allBrands.push({
+                  id: `product_${brandName}`,
+                  name: brandName,
+                  image: getBrandImage(brandName), // استفاده از سیستم متمرکز
+                  slug: getBrandSlug(brandName)
+                });
+              });
+            }
+          } catch (error) {
+            console.error('Error fetching brands from products:', error);
+          }
+          
+          // استفاده از سیستم متمرکز برای تصاویر
+          const brandsWithImages = allBrands.map(brand => ({
+            id: brand.id,
+            name: brand.name,
+            image: brand.image || getBrandImage(brand.name), // استفاده از سیستم متمرکز
+            slug: getBrandSlug(brand.name)
+          }));
+          
+          // فیلتر کردن برندهای نامطلوب از سمت چپ هیوندا
+          // حذف: جی ای سی، جی‌ای‌سی
+          // نگه داشتن: ام‌جی، فولکس‌واگن، ام جی، فولکس واگن
+          const filteredBrands = brandsWithImages.filter(brand => {
+            const brandName = brand.name;
+            // حذف برندهای نامطلوب
+            return !['جی ای سی', 'جی‌ای‌سی'].includes(brandName);
+          });
+          
+          // سیستم یکسان‌سازی و حذف تکرار برندها
+          const uniqueBrands = [];
+          const seenBrands = new Set();
+          
+          // تابع یکسان‌سازی نام برندها
+          const normalizeBrandName = (brandName) => {
+            const brandMap = {
+              // ام‌جی
+              'ام‌جی': 'ام‌جی',
+              'ام جی': 'ام‌جی',
+              'MG': 'ام‌جی',
+              'mg': 'ام‌جی',
+              
+              // فولکس‌واگن
+              'فولکس‌واگن': 'فولکس‌واگن',
+              'فولکس واگن': 'فولکس‌واگن',
+              'Volkswagen': 'فولکس‌واگن',
+              'volkswagen': 'فولکس‌واگن',
+              
+              // سانگ یانگ
+              'سانگ یانگ': 'سانگ یانگ',
+              'سانگ‌یانگ': 'سانگ یانگ',
+              'Sang Yang': 'سانگ یانگ',
+              'sangyang': 'سانگ یانگ',
+              
+              // گک-گونو
+              'گک-گونو': 'گک-گونو',
+              'گک گونو': 'گک-گونو',
+              'Geek-Gono': 'گک-گونو',
+              'Geek Gono': 'گک-گونو',
+              'geek-gono': 'گک-گونو',
+              
+              // مکث-موتور
+              'گک-گونو مکث-موتور': 'مکث-موتور',
+              'مکث-موتور': 'مکث-موتور',
+              'مکث موتور': 'مکث-موتور',
+              'Mekth-Motor': 'مکث-موتور',
+              'Mekth Motor': 'مکث-موتور',
+              'geek-gono-motor': 'مکث-موتور',
+              
+              // اس دبلیو ام
+              'اس دبلیو ام': 'اس دبلیو ام',
+              'SWM': 'اس دبلیو ام',
+              'swm': 'اس دبلیو ام',
+              
+              // دانگ فنگ
+              'دانگ فنگ': 'دانگ فنگ',
+              'Dongfeng': 'دانگ فنگ',
+              'dongfeng': 'دانگ فنگ',
+              
+              // BMW
+              'بی‌ام‌دبلیو': 'بی‌ام‌دبلیو',
+              'BMW': 'بی‌ام‌دبلیو',
+              'bmw': 'بی‌ام‌دبلیو',
+              
+              // چانگان
+              'چانگان': 'چانگان',
+              'Changan': 'چانگان',
+              'changan': 'چانگان',
+              
+              // آمیکو
+              'آمیکو': 'آمیکو',
+              'Amico': 'آمیکو',
+              'amico': 'آمیکو',
+              
+              // برلیانس
+              'برلیانس': 'برلیانس',
+              'Brilliance': 'برلیانس',
+              'brilliance': 'برلیانس',
+              
+              // بنز
+              'بنز': 'بنز',
+              'Benz': 'بنز',
+              'benz': 'بنز',
+              'مرسدس': 'بنز',
+              'مرسدس بنز': 'بنز',
+              'Mercedes': 'بنز',
+              'mercedes': 'بنز',
+              
+              // فردا موتورز
+              'فردا موتورز': 'فردا موتورز',
+              'فردا موتور': 'فردا موتورز',
+              'Farda Motors': 'فردا موتورز',
+              'Farda Motor': 'فردا موتورز',
+              'farda-motors': 'فردا موتورز',
+              'farda-motor': 'فردا موتورز',
+              
+              // گریت وال
+              'گریت وال': 'گریت وال',
+              'گریتوال': 'گریت وال',
+              'Great Wall': 'گریت وال',
+              'GreatWall': 'گریت وال',
+              'great-wall': 'گریت وال',
+              'greatwall': 'گریت وال'
             };
             
-            return {
-              id: brand.id,
-              name: brand.name,
-              image: imageMap[brand.name] || '/default-brand.png',
-              slug: getBrandSlug(brand.name)
-            };
+            return brandMap[brandName] || brandName;
+          };
+          
+          filteredBrands.forEach(brand => {
+            const normalizedName = normalizeBrandName(brand.name);
+            
+            // اگر این برند قبلاً اضافه نشده، اضافه کن
+            if (!seenBrands.has(normalizedName)) {
+              seenBrands.add(normalizedName);
+              uniqueBrands.push({
+                ...brand,
+                name: normalizedName // نام یکسان شده
+              });
+            }
           });
-          setBrands(brandsWithImages);
+          
+          console.log('Final brands list (unique):', uniqueBrands);
+          setBrands(uniqueBrands);
         }
       } catch (error) {
         console.error('Error fetching brands:', error);
         // در صورت خطا، برندهای پیش‌فرض را نمایش بده
-        setBrands([
+        const fallbackBrands = [
           { id: 1, name: 'سایپا', image: '/saipa.png', slug: getBrandSlug('سایپا') },
           { id: 2, name: 'ایران خودرو', image: '/irankhodro.png', slug: getBrandSlug('ایران خودرو') },
           { id: 3, name: 'پژو', image: '/peugeot.png', slug: getBrandSlug('پژو') },
@@ -145,7 +220,25 @@ const BrandCategories = () => {
           { id: 6, name: 'تویوتا', image: '/toyota.png', slug: getBrandSlug('تویوتا') },
           { id: 7, name: 'لکسوس', image: '/lexus.png', slug: getBrandSlug('لکسوس') },
           { id: 8, name: 'کیا', image: '/kia.png', slug: getBrandSlug('کیا') },
-        ]);
+          { id: 9, name: 'جیلی', image: '/geely.png', slug: getBrandSlug('جیلی') },
+          { id: 10, name: 'مزدا', image: '/mazda.png', slug: getBrandSlug('مزدا') },
+          { id: 11, name: 'میتسوبیشی', image: '/mitsubishi.png', slug: getBrandSlug('میتسوبیشی') },
+          { id: 12, name: 'سوزوکی', image: '/suzuki.png', slug: getBrandSlug('سوزوکی') },
+          { id: 13, name: 'رنو', image: '/renault.png', slug: getBrandSlug('رنو') },
+          { id: 14, name: 'فاو', image: '/faw.png', slug: getBrandSlug('فاو') },
+          { id: 15, name: 'فولکس‌واگن', image: '/kia.png', slug: getBrandSlug('فولکس‌واگن') }, // کنار فاو
+        ];
+        
+        // فیلتر کردن برندهای نامطلوب از سمت چپ هیوندا
+        // حذف: جی ای سی، جی‌ای‌سی
+        // نگه داشتن: ام‌جی، فولکس‌واگن، ام جی، فولکس واگن
+        const filteredFallbackBrands = fallbackBrands.filter(brand => {
+          const brandName = brand.name;
+          // حذف فقط برندهای نامطلوب
+          return !['جی ای سی', 'جی‌ای‌سی'].includes(brandName);
+        });
+        
+        setBrands(filteredFallbackBrands);
       } finally {
         setLoading(false);
       }
@@ -194,152 +287,117 @@ const BrandCategories = () => {
       'پژو': 'peugeot',
       'ایران خودرو': 'irankhodro',
       'فاو': 'faw',
-      'جی‌ای‌سی': 'jac',
-      'جک': 'jac'
+      // برندهای جدید اضافه شده
+      'بی‌ام‌دبلیو': 'bmw',
+      'چانگان': 'changan',
+      'آمیکو': 'amico',
+      'برلیانس': 'brilliance',
+      'بنز': 'benz',
+      'مرسدس': 'mercedes',
+      'سانگ یانگ': 'sangyang',
+      'سانگ‌یانگ': 'sangyang',
+      // برندهای جدید اضافه شده
+      'اس دبلیو ام': 'swm',
+      'SWM': 'swm',
+      'دانگ فنگ': 'dongfeng',
+      'Dongfeng': 'dongfeng',
+      'گک-گونو': 'geek-gono',
+      'گک گونو': 'geek-gono',
+      'Geek Gono': 'geek-gono',
+      'گک': 'geek-gono',
+      'Gono': 'geek-gono',
+      'گک-گونو مکث-موتور': 'geek-gono-motor',
+      'Geek-Gono': 'geek-gono',
+      'Geek-Gono Motor': 'geek-gono-motor',
+      'مکث-موتور': 'geek-gono-motor',
+      'Mekth-Motor': 'geek-gono-motor',
+      'مکث موتور': 'geek-gono-motor',
+      'Mekth Motor': 'geek-gono-motor',
+      // برندهای جدید اضافه شده
+      'فردا موتورز': 'farda-motors',
+      'فردا موتور': 'farda-motors',
+      'Farda Motors': 'farda-motors',
+      'Farda Motor': 'farda-motors',
+      'گریت وال': 'great-wall',
+      'گریتوال': 'great-wall',
+      'Great Wall': 'great-wall',
+      'GreatWall': 'great-wall'
     };
     return slugMap[brandName] || brandName.toLowerCase().replace(/\s+/g, '-');
   };
 
-  // فیلتر کردن ماشین‌ها بر اساس متن جستجو
-  useEffect(() => {
-    if (searchTerm.trim() === '') {
-      setFilteredCars([]);
-      setShowResults(false);
-      return;
-    }
 
-    const filtered = allCars.filter(car =>
-      car.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      car.category.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    setFilteredCars(filtered.slice(0, 10)); // حداکثر 10 نتیجه
-    setShowResults(filtered.length > 0);
-  }, [searchTerm]);
-
-  // بستن نتایج با کلیک خارج از جستجو
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (searchRef.current && !searchRef.current.contains(event.target)) {
-        setShowResults(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (searchTerm.trim()) {
-      console.log('جستجو برای:', searchTerm);
-      setShowResults(false);
-    }
-  };
-
-  const handleCarSelect = (car) => {
-    setSearchTerm(car.name);
-    setShowResults(false);
-    // می‌تونید کاربر رو به صفحه محصول هدایت کنید
-    // window.location.href = car.link;
-  };
 
   return (
-    <div className='flex flex-col lg:flex-row justify-evenly items-center w-full px-12 sm:px-4 lg:px-4'>
-      {/* Search Section */}
-      <div className='w-full lg:w-auto flex flex-col justify-center items-center mb-12 lg:mb-28'>
-        <h1 className='text-xl sm:text-2xl font-bold text-center mb-4'>از دسته بندی برند مورد نظرت شروع کن...</h1>
+    <div className='flex flex-col lg:flex-col justify-evenly items-center w-full px-4 sm:px-4 lg:px-4 max-w-full overflow-hidden'>
+      {/* Brand Logos Carousel */}
+      <div className='relative w-full mb-2 mt-24 md:mt-8 lg:mt-10 lg:mb-2 max-w-full overflow-hidden'>
+        {/* دکمه‌های چپ و راست برای موبایل */}
+        <button
+          type='button'
+          onClick={() => {
+            if (scrollRef.current) {
+              scrollRef.current.scrollBy({ left: -200, behavior: 'smooth' });
+            }
+          }}
+          className='absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-blue-500/50 hover:bg-blue-600/70 text-white shadow-lg rounded-full p-0.5 sm:p-1 transition-all duration-200'
+          aria-label='قبلی'
+        >
+          <ArrowBackIosNewIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+        </button>
         
-        {/* Search Input with Smart Search */}
-        <div className='flex items-center justify-center gap-2 m-4 relative' ref={searchRef}>
-          <input 
-            className='border w-64 sm:w-72 text-center outline-none border-gray-300 rounded-md shadow-md shadow-slate-300 px-4 py-2 text-sm sm:text-base' 
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="نام ماشین خود را جستجو کنید..."
-          />
-          <div className='transition-all duration-300 hover:scale-[1.2]'>
-            <ZoomInIcon 
-              className='cursor-pointer scale-125 bg-blue-500 text-white rounded-md p-0.5' 
-              onClick={handleSearch}
-            />
-          </div>
+        <button
+          type='button'
+          onClick={() => {
+            if (scrollRef.current) {
+              scrollRef.current.scrollBy({ left: 200, behavior: 'smooth' });
+            }
+          }}
+          className='absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-blue-500/50 hover:bg-blue-600/70 text-white shadow-lg rounded-full p-0.5 sm:p-1 transition-all duration-200'
+          aria-label='بعدی'
+        >
+          <ArrowForwardIosIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+        </button>
 
-          {/* نتایج جستجو */}
-          {showResults && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-2xl border border-gray-200 max-h-96 overflow-y-auto z-50 w-64 sm:w-72">
-              <div className="p-2">
-                {filteredCars.map((car) => (
-                  <div
-                    key={car.id}
-                    onClick={() => handleCarSelect(car)}
-                    className="flex items-center justify-between p-3 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors duration-150 group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="text-blue-600 font-bold text-xs">
-                          {car.category.charAt(0)}
-                        </span>
-                      </div>
-                      <div>
-                        <div className="font-medium text-gray-800 group-hover:text-blue-600 text-sm">
-                          {car.name}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {car.category}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                      →
-                    </div>
-                  </div>
-                ))}
-                
-                {filteredCars.length === 0 && searchTerm.trim() !== '' && (
-                  <div className="p-4 text-center text-gray-500 text-sm">
-                    هیچ ماشینی با این نام یافت نشد
-                  </div>
-                )}
+        <div
+          id="brands-carousel"
+          ref={scrollRef}
+          className='flex items-center gap-3 sm:gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory px-1 max-w-full'
+        >
+          {loading ? (
+            Array.from({ length: 10 }).map((_, index) => (
+              <div key={index} className='flex flex-col items-center justify-center p-2 snap-start flex-shrink-0'>
+                <div className='w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-gray-200 animate-pulse rounded-full'></div>
+                <div className='mt-2 w-16 h-4 bg-gray-200 animate-pulse rounded'></div>
               </div>
-            </div>
+            ))
+          ) : (
+            brands.map((brand) => (
+              <Link
+                key={brand.id}
+                to={`/brand-products/${brand.slug}`}
+                className='flex flex-col items-center justify-center p-2 snap-start min-w-[88px] sm:min-w-[96px] flex-shrink-0'
+              >
+                <img
+                  className='w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain border-4 sm:border-6 transition-all duration-300 border-double hover:shadow-xl hover:shadow-slate-400 hover:cursor-pointer hover:scale-110 rounded-[50%] shadow-md shadow-slate-600'
+                  src={brand.image}
+                  alt={brand.name}
+                />
+                <h2 className='mt-2 font-extrabold text-xs sm:text-sm text-center'>
+                  {brand.name}
+                </h2>
+              </Link>
+            ))
           )}
         </div>
-
-        <h1 className='flex items-center gap-2 text-sm sm:text-base'>
-          <PanToolAltOutlinedIcon className='scale-110' />
-          اینجا جستجو کن...
-        </h1>
       </div>
 
-      {/* Brand Logos Grid */}
-      <div className='grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-9 gap-2 sm:gap-4 lg:gap-1 w-full lg:w-auto mb-12 lg:mb-28'>
-        {loading ? (
-          // Skeleton loader برای برندها
-          Array.from({ length: 9 }).map((_, index) => (
-            <div key={index} className='flex flex-col justify-evenly items-center p-2'>
-              <div className='w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 bg-gray-200 animate-pulse rounded-full'></div>
-              <div className='mt-2 sm:mt-3 lg:mt-4 w-16 h-4 bg-gray-200 animate-pulse rounded'></div>
-            </div>
-          ))
-        ) : (
-          brands.map(brand => (
-            <Link key={brand.id} to={`/brands/${brand.slug}`} className='flex flex-col justify-evenly items-center p-2 group'>
-              <img 
-                className='w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-24 object-contain border-4 sm:border-6 lg:border-8 transition-all duration-300 border-double hover:shadow-xl hover:shadow-slate-400 hover:cursor-pointer hover:scale-110 rounded-[50%] shadow-md shadow-slate-600 group-hover:border-blue-500' 
-                src={brand.image} 
-                alt={brand.name} 
-              />
-              <h2 className='mt-2 sm:mt-3 lg:mt-4 font-extrabold text-xs sm:text-sm md:text-base lg:text-lg text-center group-hover:text-blue-600 transition-colors duration-300'>
-                {brand.name}
-              </h2>
-            </Link>
-          ))
-        )}
-      </div>
+
+
+
+      
+ 
+       
     </div>
   )
 }

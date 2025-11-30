@@ -78,19 +78,19 @@ const FeaturesSection = () => {
         <div className="mt-16 bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl p-8 text-white">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
             <div>
-              <div className="text-4xl font-bold mb-2">10+</div>
+              <div className="text-4xl font-bold mb-2">۱۰+</div>
               <div className="text-blue-100">سال تجربه</div>
             </div>
             <div>
-              <div className="text-4xl font-bold mb-2">50K+</div>
+              <div className="text-4xl font-bold mb-2">۲۰۰۰+</div>
               <div className="text-blue-100">مشتری راضی</div>
             </div>
             <div>
-              <div className="text-4xl font-bold mb-2">100+</div>
+              <div className="text-4xl font-bold mb-2">۱۰۰+</div>
               <div className="text-blue-100">نوع محصول</div>
             </div>
             <div>
-              <div className="text-4xl font-bold mb-2">24/7</div>
+              <div className="text-4xl font-bold mb-2">۲۴/۷</div>
               <div className="text-blue-100">پشتیبانی</div>
             </div>
           </div>

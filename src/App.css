@@ -1,8 +1,50 @@
 .base-container{
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* جلوگیری از اسکرول افقی در کل صفحه */
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* بهینه‌سازی container اصلی */
+.main {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-top: 6rem; /* 96px - برای موبایل‌های خیلی کوچک */
+}
+
+/* موبایل‌های کوچک (زیر 450px) */
+@media (min-width: 450px) and (max-width: 767px) {
+  .main {
+    margin-top: 5rem; /* 80px - برای موبایل‌های معمولی */
+  }
+}
+
+/* تبلت */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .main {
+    margin-top: 4.5rem; /* 72px - برای تبلت */
+  }
+}
+
+/* دسکتاپ */
+@media (min-width: 1024px) {
+  .main {
+    margin-top: 3rem; /* 48px - برای دسکتاپ */
+  }
 }
 
 @font-face {
@@ -12,12 +54,13 @@
 
 body{
   font-family: 'pinar';
+  overflow-x: hidden;
 }
 
 .footer{
-  position: absolute;
-  bottom: 0;
-  left: 0;
+  position: relative;
+  width: 100%;
+  margin-top: auto;
 }
 
 /* Customer Club Animations */
@@ -82,4 +125,17 @@ body{
 .animate-stagger-2 { animation-delay: 0.2s; }
 .animate-stagger-3 { animation-delay: 0.3s; }
 .animate-stagger-4 { animation-delay: 0.4s; }
+
+/* بهینه‌سازی موبایل */
+@media (max-width: 768px) {
+  .base-container {
+    padding: 0;
+    margin: 0;
+  }
+  
+  .main {
+    padding: 0;
+    margin: 0;
+  }
+}
 

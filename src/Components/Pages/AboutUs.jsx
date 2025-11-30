@@ -1,12 +1,16 @@
 import React from "react";
+import Breadcrumbs from '../Common/Breadcrumbs';
 
 const AboutUs = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      {/* Breadcrumbs */}
+      <Breadcrumbs />
+      
       <div className="max-w-7xl mx-auto">
         {/* Hero Section */}
         <div className="text-center mb-16">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl font-bold text-gray-900 my-4 ">
             درباره لنت شاپ
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
@@ -17,7 +21,7 @@ const AboutUs = () => {
 
         {/* Company Story */}
         <div className="bg-white rounded-lg shadow-lg p-8 mb-12">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-32 items-center">
             <div>
               <h2 className="text-3xl font-bold text-gray-900 mb-6">
                 داستان ما
@@ -38,8 +42,9 @@ const AboutUs = () => {
                 تجربه خرید اینترنتی را برایتان فراهم کنیم.
               </p>
             </div>
-            <div className="bg-gray-200 h-80 rounded-lg flex items-center justify-center">
-              <p className="text-gray-600">تصویر شرکت در اینجا قرار می‌گیرد</p>
+            <div className="bg-gray-200 h-72 rounded-lg flex items-center justify-center">
+              <img className="w-full h-full  object-cover rounded-lg" src="/WEBP/2.webp" alt="تصویر فروشگاه" />
+              <img className="w-full h-full  object-fill rounded-lg" src="/WEBP/22.webp" alt="تصویر فروشگاه" />
             </div>
           </div>
         </div>
@@ -182,18 +187,14 @@ const AboutUs = () => {
           <h2 className="text-3xl font-bold text-white mb-8 text-center">
             آمار و دستاوردها
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-8 text-center">
             <div>
-              <div className="text-4xl font-bold text-white mb-2">۵۰۰۰+</div>
+              <div className="text-4xl font-bold text-white mb-2">۲۰۰۰+</div>
               <div className="text-blue-100">مشتری راضی</div>
             </div>
             <div>
               <div className="text-4xl font-bold text-white mb-2">۱۰+</div>
               <div className="text-blue-100">سال تجربه</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-white mb-2">۵۰+</div>
-              <div className="text-blue-100">کارشناس متخصص</div>
             </div>
             <div>
               <div className="text-4xl font-bold text-white mb-2">۲۴/۷</div>
@@ -207,42 +208,19 @@ const AboutUs = () => {
           <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
             تیم متخصص ما
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="text-center">
-              <div className="bg-gray-200 w-32 h-32 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <p className="text-gray-600">تصویر مدیر</p>
-              </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">
-                احمد محمدی
+                پویا شعبانی
               </h3>
-              <p className="text-blue-600 mb-2">مدیرعامل</p>
-              <p className="text-gray-600">
-                متخصص با ۱۵ سال تجربه در صنعت خودرو
-              </p>
+              <p className="text-blue-600 mb-2">مدیریت فروشگاه</p>
             </div>
 
             <div className="text-center">
-              <div className="bg-gray-200 w-32 h-32 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <p className="text-gray-600">تصویر مدیر فنی</p>
-              </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">
-                علی رضایی
+                امیر ارسلان شعبانی
               </h3>
-              <p className="text-blue-600 mb-2">مدیر فنی</p>
-              <p className="text-gray-600">
-                مهندس مکانیک با تخصص در تعمیرات پیشرفته
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="bg-gray-200 w-32 h-32 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <p className="text-gray-600">تصویر مدیر فروش</p>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
-                فاطمه کریمی
-              </h3>
-              <p className="text-blue-600 mb-2">مدیر فروش</p>
-              <p className="text-gray-600">متخصص بازاریابی و مدیریت مشتریان</p>
+              <p className="text-blue-600 mb-2">پشتیبانی و سرویس</p>
             </div>
           </div>
         </div>

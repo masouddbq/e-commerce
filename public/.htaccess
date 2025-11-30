@@ -1,0 +1,16 @@
+Options -MultiViews
+RewriteEngine On
+RewriteBase /
+
+# Serve existing files/directories
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# SPA fallback to index.html
+RewriteRule . /index.html [L]
+
+# Optional: ensure 404s fall back to SPA
+ErrorDocument 404 /index.html
+
+

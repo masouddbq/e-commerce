@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { supabase } from '../../lib/supabase';
 import ProductCard from '../Common/ProductCard';
 
@@ -62,7 +63,17 @@ const Suv = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
+      <Helmet>
+        <title>لنت خودروهای شاسی بلند | خرید لنت ترمز شاسی بلند | لنت شاپ</title>
+        <meta name="description" content="خرید لنت ترمز برای خودروهای شاسی بلند (SUV) - لنت جلو، لنت عقب، لنت دستی و لنت پا. بهترین قیمت و کیفیت تضمینی. ارسال سریع به سراسر کشور." />
+        <meta name="keywords" content="لنت شاسی بلند, لنت SUV, لنت ترمز شاسی بلند, لنت جیلی, لنت کیا, لنت هیوندای" />
+        <meta property="og:title" content="لنت خودروهای شاسی بلند | لنت شاپ" />
+        <meta property="og:description" content="خرید لنت ترمز برای خودروهای شاسی بلند با بهترین قیمت و کیفیت" />
+        <meta property="og:url" content="https://lent-shop.ir/suv" />
+        <link rel="canonical" href="https://lent-shop.ir/suv" />
+      </Helmet>
+      <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -109,6 +120,7 @@ const Suv = () => {
         )}
       </div>
     </div>
+    </>
   );
 };
 

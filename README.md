@@ -1,12 +1,61 @@
-# React + Vite
+# لنت شاپ - فروشگاه آنلاین
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+پروژه فروشگاه آنلاین با React + Vite و Express.js
 
-Currently, two official plugins are available:
+## 🚀 راه‌اندازی روی VPS ویندوز
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+برای راه‌اندازی کامل پروژه روی VPS ویندوز، به مستندات زیر مراجعه کنید:
 
-## Expanding the ESLint configuration
+- **راهنمای سریع:** [`VPS_README.md`](./VPS_README.md)
+- **راهنمای کامل:** [`VPS_WINDOWS_SETUP.md`](./VPS_WINDOWS_SETUP.md)
+- **چک‌لیست:** [`VPS_QUICK_CHECKLIST.md`](./VPS_QUICK_CHECKLIST.md)
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### اجرای خودکار
+
+```powershell
+# PowerShell
+.\setup-vps.ps1
+
+# یا CMD
+setup-vps.bat
+```
+
+## 📚 مستندات دیگر
+
+- [راهنمای احراز هویت](./AUTHENTICATION_GUIDE.md)
+- [راهنمای سریع شروع](./QUICK_START_AUTH.md)
+- [راهنمای عیب‌یابی](./TROUBLESHOOTING.md)
+
+---
+
+## 🛠️ توسعه
+
+### نصب Dependencies
+
+```bash
+npm install
+```
+
+### اجرای Development Server
+
+```bash
+npm run dev
+```
+
+### Build برای Production
+
+```bash
+npm run build
+```
+
+### اجرای Backend Server
+
+```bash
+npm run server
+```
+
+---
+
+## 📝 یادداشت
+
+این پروژه از React + Vite برای فرانت و Express.js برای بک‌اند استفاده می‌کند.

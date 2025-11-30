@@ -1,0 +1,44 @@
+# robots.txt for lent-shop.ir
+
+# Allow all search engines to crawl the site
+User-agent: *
+Allow: /
+
+# Disallow private/admin pages from being indexed
+Disallow: /admin
+Disallow: /admin/
+Disallow: /login
+Disallow: /register
+Disallow: /checkout
+Disallow: /checkout/
+Disallow: /checkout/success
+Disallow: /payment
+Disallow: /payment/
+Disallow: /payment/form
+Disallow: /payment/card-to-card
+Disallow: /payment/verify
+Disallow: /payment/callback
+Disallow: /payment/test
+
+# Allow important public pages
+Allow: /categories
+Allow: /vehicle
+Allow: /suv
+Allow: /pickup
+Allow: /product/
+Allow: /brands/
+Allow: /brand-products/
+Allow: /specials
+Allow: /about
+Allow: /contact
+Allow: /club
+Allow: /terms
+Allow: /privacy
+Allow: /guide
+Allow: /shipping
+Allow: /return
+Allow: /search-results/
+
+# Sitemap location
+Sitemap: https://lent-shop.ir/sitemap.xml
+

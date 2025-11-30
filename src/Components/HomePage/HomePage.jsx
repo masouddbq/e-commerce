@@ -1,29 +1,94 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Helmet } from 'react-helmet-async';
 import HeroSlider from './HeroSlider';
 import BrandCategories from './BrandCategories';
-import PopularProducts from './PopularProducts';
 import FeaturesSection from './FeaturesSection';
 import CustomerReviews from './CustomerReviews';
 import NewsletterSection from './NewsletterSection';
-import SpecialOffers from './SpecialOffers';
 import AboutSection from './AboutSection';
-import FeaturedProducts from './FeaturedProducts';
-import QuickAccessButton from './QuickAccessButton';
+import ProductsAndOffers from './ProductsAndOffers';
+import QuickSearchModal from '../Common/QuickSearchModal';
+import QuickSearchButton from './QuickSearchButton';
+import SearchIcon from '@mui/icons-material/Search';
+import CategoryIcon from '@mui/icons-material/Category';
+import { Link } from 'react-router-dom';
 
 const HomePage = () => {
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+
+  const openSearchModal = () => {
+    setIsSearchModalOpen(true);
+  };
+
+  const closeSearchModal = () => {
+    setIsSearchModalOpen(false);
+  };
+
   return (
-    <div className='flex flex-col w-full'>
+    <>
+      <Helmet>
+        <title>لنت شاپ | فروشگاه تخصصی لنت خودرو با بهترین کیفیت و قیمت</title>
+        <meta name="description" content="لنت شاپ - بزرگترین فروشگاه آنلاین لنت ترمز خودرو در ایران. لنت جلو، لنت عقب، لنت دستی و لنت پا برای تمام برندها با بهترین قیمت و کیفیت تضمینی. خرید آنلاین و ارسال سریع به سراسر کشور." />
+        <meta name="keywords" content="لنت خودرو, لنت ترمز, لنت کلاچ, لنت شاپ, فروشگاه لنت, لنت جلو, لنت عقب, خرید لنت" />
+        <meta property="og:title" content="لنت شاپ | فروشگاه تخصصی لنت خودرو" />
+        <meta property="og:description" content="لنت شاپ - فروشگاه تخصصی لنت خودرو با بهترین کیفیت و قیمت. خرید آنلاین لنت ترمز برای تمام برندها" />
+        <meta property="og:url" content="https://lent-shop.ir/" />
+        
+        <link rel="canonical" href="https://lent-shop.ir/" />
+      </Helmet>
+      <div className='flex flex-col w-full max-w-full overflow-hidden'>
       <BrandCategories />
+      
+      {/* Search Bar - نوار جستجو (فقط دسکتاپ) */}
+      <div className="hidden lg:block lg:mb-10 items-center w-full bg-gradient-to-r from-blue-600 to-blue-700 py-3 px-4 sm:px-6 lg:px-32">
+        <div className="max-w-2xl bg-white bg-opacity-20 rounded-xl mx-auto">
+          <button
+            onClick={openSearchModal}
+            className="w-full flex items-center justify-center gap-4 text-white hover:bg-white hover:bg-opacity-20 transition-all duration-300 rounded-lg py-1 px-6 group"
+          >
+            <SearchIcon className="text-xl group-hover:scale-110 transition-transform duration-300" />
+            <span className="text-lg font-medium">جستجوی سریع محصولات و برندها</span>
+            <SearchIcon className="text-xl group-hover:scale-110 transition-transform duration-300" />
+          </button>
+        </div>
+      </div>
+      
       <HeroSlider />
-      <QuickAccessButton />
+      
+      {/* Quick Access to Categories Button - دکمه دسترسی سریع به دسته‌بندی‌ها (فقط دسکتاپ) */}
+      <div className="hidden lg:block lg:mb-2 lg:mt-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-center">
+            <Link
+              to="/categories"
+              className="inline-flex items-center gap-3 bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl px-6 py-3 text-blue-600 hover:bg-white/30 hover:border-white/50 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl shadow-blue-600/75 hover:shadow-blue-500/40"
+            >
+              <CategoryIcon className="text-xl text-blue-600" />
+              <span className="text-lg font-medium text-blue-600">دسترسی سریع به دسته‌بندی‌ها</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+      
+      <ProductsAndOffers />
+      
+      {/* Quick Search Button - دکمه دایره‌ای (فقط موبایل و تبلت) */}
+      <div className="lg:hidden">
+        <QuickSearchButton />
+      </div>
+      
       <AboutSection />
-      <FeaturesSection />
-      <SpecialOffers />
-      <FeaturedProducts />
-      <PopularProducts />
       <CustomerReviews />
+      <FeaturesSection />
       <NewsletterSection />
+
+      {/* Quick Search Modal */}
+      <QuickSearchModal 
+        isOpen={isSearchModalOpen} 
+        onClose={closeSearchModal} 
+      />
     </div>
+    </>
   )
 }
 

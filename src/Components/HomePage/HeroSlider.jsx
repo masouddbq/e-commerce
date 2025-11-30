@@ -6,7 +6,7 @@ const HeroSlider = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const sliderImages = [
-    { id: 1, src: "/hero1.jpg" },
+    { id: 1, src: "/hero1.webp" },
     { id: 2, src: "/hero2.jpg" },
     { id: 3, src: "/hero3.jpg" }
   ];
@@ -36,15 +36,15 @@ const HeroSlider = () => {
   };
 
   return (
-    <div className="relative flex justify-center items-center px-4 sm:px-6 lg:px-8">
-      <div className="relative w-full max-w-7xl">
+    <div className="relative flex justify-center items-center  px-2 sm:px-6 lg:px-2">
+      <div className="relative xl:scale-75 lg:scale-75 md:scale-90 sm:scale-80 w-full max-w-7xl">
         {/* Main Image */}
         <img
           src={sliderImages[currentSlide].src}
-          className="w-full h-48 sm:h-64 md:h-80 lg:h-96 xl:h-[50vh] shadow-2xl shadow-blue-950 border-2 sm:border-4 lg:border-8 border-slate-500 rounded-lg sm:rounded-xl mx-auto object-cover"
+          className="w-full h-56 sm:h-[60vh] md:h-[70vh] lg:h-[80vh] xl:h-[90vh] shadow-2xl shadow-blue-950 border-2 sm:border-4 lg:border-8 border-slate-500 rounded-lg sm:rounded-xl mx-auto p-1 object-cover"
           alt={`Slide ${currentSlide + 1}`}
         />
-        
+          
         {/* Navigation Arrows */}
         <button
           onClick={prevSlide}
@@ -61,7 +61,7 @@ const HeroSlider = () => {
         </button>
         
         {/* Slide Indicators */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
+        <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 flex items-center justify-center gap-2 sm:gap-3">
           {sliderImages.map((_, index) => (
             <button
               key={index}
