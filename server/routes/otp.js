@@ -14,7 +14,18 @@ otpRouter.post('/send', async (req, res, next) => {
     const result = await sendOtpToPhone(phone);
     return res.json({ success: true, ...result });
   } catch (err) {
-    return next(err);
+    console.error('[OTP Route] Error in /send:', err);
+    console.error('[OTP Route] Error message:', err.message);
+    console.error('[OTP Route] Error stack:', err.stack);
+    
+    // اگر خطا از Supabase باشه، status code رو حفظ می‌کنیم
+    const statusCode = err.status || err.statusCode || (err.message?.includes('Supabase') ? 422 : 500);
+    
+    return res.status(statusCode).json({
+      success: false,
+      error: err.message || 'خطا در ارسال کد تایید',
+      details: process.env.NODE_ENV !== 'production' ? err.stack : undefined,
+    });
   }
 });
 

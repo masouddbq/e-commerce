@@ -10,7 +10,7 @@ export const PAYMENT_GATEWAYS = {
     merchantId: import.meta.env.VITE_ZARINPAL_MERCHANT_ID || 'test_merchant_id',
     apiKey: import.meta.env.VITE_ZARINPAL_API_KEY || 'test_api_key',
     callbackUrl: import.meta.env.VITE_ZARINPAL_CALLBACK_URL || 'http://localhost:3000/payment/callback',
-    sandbox: import.meta.env.VITE_ZARINPAL_SANDBOX === 'true' || true,
+    sandbox: import.meta.env.VITE_ZARINPAL_SANDBOX === 'true',
     enabled: true
   },
   PAYPING: {
@@ -239,8 +239,11 @@ export const validatePaymentData = (data) => {
  * تابع کمکی برای ایجاد URL پرداخت
  */
 export const createPaymentUrl = (gateway, paymentData) => {
+  const isSandbox = import.meta.env.VITE_ZARINPAL_SANDBOX === 'true';
   const baseUrls = {
-    ZARINPAL: 'https://sandbox.zarinpal.com/pg/StartPay/',
+    ZARINPAL: isSandbox 
+      ? 'https://sandbox.zarinpal.com/pg/StartPay/'
+      : 'https://www.zarinpal.com/pg/StartPay/',
     PAYPING: 'https://api.payping.ir/v2/pay/',
     IDPAY: 'https://api.idpay.ir/v1.1/payment/'
   };

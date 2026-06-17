@@ -1,7 +1,6 @@
 import React from 'react';
-import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import FeaturedProducts from './FeaturedProducts';
-import SpecialOffers from './SpecialOffers';
+import ProductRows from './ProductRows';
 
 const ProductsAndOffers = () => {
   return (
@@ -19,20 +18,8 @@ const ProductsAndOffers = () => {
         </div>
       </div>
 
-      {/* بخش تخفیف‌های ویژه */}
-      <div className="bg-white py-8">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
-              <LocalOfferIcon className="text-red-600 text-2xl" />
-            </div>
-            <h2 className="text-3xl font-bold text-gray-800 mb-4">تخفیف‌های ویژه</h2>
-            <p className="text-gray-600">فرصت‌های طلایی خرید با بهترین قیمت‌ها</p>
-          </div>
-          
-          <SpecialOffers />
-        </div>
-      </div>
+      {/* ردیف‌های محصولات: جدید، پرفروش، تخفیف‌دار */}
+      <ProductRows />
     </div>
   );
 };

@@ -23,12 +23,40 @@ if (!SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error('SUPABASE_SERVICE_ROLE_KEY تنظیم نشده است');
 }
 
+// ایجاد Supabase client با تنظیمات بهینه
+// استفاده از REST API URL (نه PostgreSQL connection string)
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: {
     autoRefreshToken: false,
     persistSession: false,
   },
+  db: {
+    schema: 'public',
+  },
+  global: {
+    headers: {
+      'x-client-info': 'lent-shop-api',
+    },
+  },
 });
+
+// تابع برای refresh connection (در صورت نیاز)
+export const refreshSupabaseConnection = () => {
+  return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+    db: {
+      schema: 'public',
+    },
+    global: {
+      headers: {
+        'x-client-info': 'lent-shop-api-refreshed',
+      },
+    },
+});
+};
 
 export default supabaseAdmin;
 

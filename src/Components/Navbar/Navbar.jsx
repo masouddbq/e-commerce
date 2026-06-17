@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import MenuIcon from "@mui/icons-material/Menu";
 import CloseIcon from "@mui/icons-material/Close";
 import PersonIcon from "@mui/icons-material/Person";
 import LoginIcon from "@mui/icons-material/Login";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import { supabase } from "../../lib/supabase";
 
 // Vehicle data for each category
@@ -34,6 +35,7 @@ const vehicleData = {
 
 const navAddresses = [
   { id: 1, link: "/vehicle", title: "سواری", category: "vehicle" },
+  { id: 4, link: "/brake-disc", title: "دیسک ترمز", category: "brake-disc" },
   { id: 2, link: "/suv", title: "شاسی بلند", category: "suv" },
   { id: 3, link: "/pickup", title: "وانت", category: "pickup" },
 ];
@@ -42,29 +44,55 @@ const navPages = [
   { id: 4, link: "/", title: "خانه" },
   { id: 2, link: "/contact", title: "تماس با ما" },
   { id: 3, link: "/about", title: "درباره ما" },
-  { id: 1, link: "/club", title: "باشگاه مشتریان" },
+  // باشگاه مشتریان - موقتاً غیرفعال
+  // { id: 1, link: "/club", title: "باشگاه مشتریان" },
 ];
 
 const Navbar = () => {
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
   const [openDropdown, setOpenDropdown] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [categoryProducts, setCategoryProducts] = useState({
     vehicle: [],
+    'brake-disc': [],
     suv: [],
     pickup: [],
   });
   const [loadingCategory, setLoadingCategory] = useState({
     vehicle: false,
+    'brake-disc': false,
     suv: false,
     pickup: false,
   });
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          setUser(session.user);
+        }
+      } catch (error) {
+        console.error('خطا در بررسی احراز هویت:', error);
+      }
+    };
+
+    checkAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleMouseEnter = (category) => {
     setOpenDropdown(category);
     // Lazy-load products for this category (6 random)
     if (
       category &&
-      categoryProducts[category]?.length === 0 &&
+      (!categoryProducts[category] || categoryProducts[category]?.length === 0) &&
       !loadingCategory[category]
     ) {
       fetchCategoryProducts(category);
@@ -98,6 +126,7 @@ const Navbar = () => {
 
   const getVehicleTypeTitle = (category) => {
     if (category === "vehicle") return "سواری";
+    if (category === "brake-disc") return "دیسک ترمز";
     if (category === "suv") return "شاسی بلند";
     if (category === "pickup") return "وانت";
     return "";
@@ -174,8 +203,18 @@ const Navbar = () => {
 
   const fetchCategoryProducts = async (category) => {
     try {
+      // بررسی اینکه category معتبر است
+      if (!category) return;
+      
       setLoadingCategory((prev) => ({ ...prev, [category]: true }));
       const vehicleTypeTitle = getVehicleTypeTitle(category);
+      
+      // اگر vehicleTypeTitle خالی باشد، query نزن
+      if (!vehicleTypeTitle) {
+        setCategoryProducts((prev) => ({ ...prev, [category]: [] }));
+        return;
+      }
+      
       const { data, error } = await supabase
         .from("products")
         .select("id,name,brand,image,vehicleType")
@@ -183,9 +222,14 @@ const Navbar = () => {
       if (!error && Array.isArray(data)) {
         const pick = shuffleSliceSix(data);
         setCategoryProducts((prev) => ({ ...prev, [category]: pick }));
+      } else {
+        // در صورت خطا، یک array خالی قرار بده
+        setCategoryProducts((prev) => ({ ...prev, [category]: [] }));
       }
     } catch (e) {
-      // silently ignore
+      // در صورت خطا، یک array خالی قرار بده
+      setCategoryProducts((prev) => ({ ...prev, [category]: [] }));
+      console.error('Error fetching category products:', e);
     } finally {
       setLoadingCategory((prev) => ({ ...prev, [category]: false }));
     }
@@ -205,10 +249,45 @@ const Navbar = () => {
               {page.title}
             </Link>
           ))}
-          {/* Customer auth removed; checkout handles OTP login */}
+          {/* User Account Link */}
+          {user ? (
+            <Link
+              to="/account"
+              className="text-white text-sm mx-3 hover:text-orange-300 transition-colors duration-200 flex items-center gap-1"
+            >
+              <AccountCircleIcon className="text-lg" />
+              <span>حساب کاربری</span>
+            </Link>
+          ) : (
+            <Link
+              to="/login"
+              className="text-white text-sm mx-3 hover:text-orange-300 transition-colors duration-200 flex items-center gap-1"
+            >
+              <LoginIcon className="text-lg" />
+              <span>ورود</span>
+            </Link>
+          )}
         </div>
-        <Link to="/" className="w-full h-10 text-center text-white text-2xl font-semibold hover:text-orange-300 transition-colors">
-          لِنــت شـــــاپ
+        <Link to="/" className="w-full h-10 text-center text-white text-2xl font-semibold hover:text-orange-300 transition-colors flex items-center justify-center gap-2">
+          {/* لوگو */}
+          <svg 
+            width="32" 
+            height="32" 
+            viewBox="0 0 40 40" 
+            className="flex-shrink-0"
+            style={{ minWidth: '32px', minHeight: '32px' }}
+          >
+            {/* دایره آبی بیرونی */}
+            <circle cx="20" cy="20" r="18" fill="#3B82F6" stroke="none"/>
+            {/* دایره سفید داخلی */}
+            <circle cx="20" cy="20" r="10" fill="white"/>
+            {/* خطوط سفید در سمت راست */}
+            <line x1="30" y1="12" x2="36" y2="12" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+            <line x1="30" y1="18" x2="36" y2="18" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+            <line x1="30" y1="22" x2="36" y2="22" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+            <line x1="30" y1="28" x2="36" y2="28" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+          <span>لِنــت شـــــاپ</span>
         </Link>
         <div className="flex justify-center items-center text-sm w-full">
           {navAddresses.map((address) => (
@@ -231,12 +310,12 @@ const Navbar = () => {
                 <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 min-w-[320px] z-50">
                   <div className="py-2">
                     {/* Random 6 products of this category */}
-                    {categoryProducts[address.category]?.length === 0 ? (
+                    {!categoryProducts[address.category] || categoryProducts[address.category]?.length === 0 ? (
                       <div className="px-4 py-2 text-sm text-gray-500">
                         در حال بارگذاری...
                       </div>
                     ) : (
-                      categoryProducts[address.category].map((p) => (
+                      (categoryProducts[address.category] || []).map((p) => (
                         <Link
                           key={p.id}
                           to={`/product/${getBrandSlug(p.brand)}/${p.id}`}
@@ -280,10 +359,40 @@ const Navbar = () => {
       {/* Mobile & Tablet Navbar */}
       <div className="lg:hidden bg-gradient-to-br fixed top-0 left-0 right-0 z-50 from-blue-600 to-blue-900 shadow-2xl shadow-gray-400 w-full overflow-hidden">
         {/* Mobile Header */}
-        <div className="flex justify-center items-center px-4 w-full">
+        <div className="flex items-center px-4 w-full py-2">
+          {/* لوگو در سمت چپ */}
+          <Link to="/" className="flex items-center hover:opacity-80 transition-opacity flex-shrink-0">
+            <svg 
+              width="28" 
+              height="28" 
+              viewBox="0 0 40 40" 
+              className="flex-shrink-0 sm:w-8 sm:h-8"
+              style={{ minWidth: '28px', minHeight: '28px' }}
+            >
+              {/* دایره آبی بیرونی */}
+              <circle cx="20" cy="20" r="18" fill="#3B82F6" stroke="none"/>
+              {/* دایره سفید داخلی */}
+              <circle cx="20" cy="20" r="10" fill="white"/>
+              {/* خطوط سفید در سمت راست */}
+              <line x1="30" y1="12" x2="36" y2="12" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+              <line x1="30" y1="18" x2="36" y2="18" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+              <line x1="30" y1="22" x2="36" y2="22" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+              <line x1="30" y1="28" x2="36" y2="28" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </Link>
+          {/* متن در وسط */}
+          <Link to="/" className="flex flex-col justify-center items-center flex-1 hover:opacity-80 transition-opacity">
+            <h1 className="text-white text-lg sm:text-xl font-semibold text-center leading-tight">
+              لِنــت شـــــاپ
+            </h1>
+            <h1 className="text-gray-50 animate-pulse duration-1000 opacity-80 transform -translate-y-3 text-md sm:text-xl font-semibold text-center leading-tight">
+              Lentshop
+            </h1>
+          </Link>
+          {/* دکمه منو در سمت راست */}
           <button
             onClick={toggleMobileMenu}
-            className="text-white p-1.5 -translate-y-1 hover:bg-blue-700 rounded-lg transition-colors duration-200"
+            className="text-white p-1.5 hover:bg-blue-700 rounded-lg transition-colors duration-200 flex-shrink-0"
           >
             {mobileMenuOpen ? (
               <CloseIcon className="text-lg" />
@@ -291,14 +400,6 @@ const Navbar = () => {
               <MenuIcon className="text-lg" />
             )}
           </button>
-          <Link to="/" className="flex flex-col justify-center items-center mt-1 ml-4 w-full hover:opacity-80 transition-opacity">
-            <h1 className="text-white text-lg sm:text-xl font-semibold text-center flex-1">
-              لِنــت شـــــاپ
-            </h1>
-            <h1 className="text-gray-50 animate-pulse duration-1000 opacity-80 transform -translate-y-3 text-md sm:text-xl font-semibold text-center flex-1">
-              Lentshop
-            </h1>
-          </Link>
 
           {/* Customer auth removed; checkout handles OTP login */}
         </div>
@@ -323,7 +424,26 @@ const Navbar = () => {
                   {page.title}
                 </Link>
               ))}
-              {/* Customer auth removed */}
+              {/* User Account Link (Mobile) */}
+              {user ? (
+                <Link
+                  to="/account"
+                  onClick={closeMobileMenu}
+                  className="px-2.5 py-1.5 text-gray-700 hover:bg-blue-100 hover:text-blue-600 transition-colors duration-200 rounded-md text-xs sm:text-sm whitespace-nowrap bg-gray-50 flex items-center gap-1"
+                >
+                  <AccountCircleIcon className="text-base" />
+                  <span>حساب کاربری</span>
+                </Link>
+              ) : (
+                <Link
+                  to="/login"
+                  onClick={closeMobileMenu}
+                  className="px-2.5 py-1.5 text-gray-700 hover:bg-blue-100 hover:text-blue-600 transition-colors duration-200 rounded-md text-xs sm:text-sm whitespace-nowrap bg-gray-50 flex items-center gap-1"
+                >
+                  <LoginIcon className="text-base" />
+                  <span>ورود</span>
+                </Link>
+              )}
             </div>
           </div>
 

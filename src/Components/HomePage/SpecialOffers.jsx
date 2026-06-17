@@ -16,13 +16,14 @@ const SpecialOffers = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const handleMembershipClick = () => {
-    if (!isAuthenticated) {
-      navigate('/register');
-    } else {
-      navigate('/club');
-    }
-  };
+  // باشگاه مشتریان - موقتاً غیرفعال
+  // const handleMembershipClick = () => {
+  //   if (!isAuthenticated) {
+  //     navigate('/register');
+  //   } else {
+  //     navigate('/club');
+  //   }
+  // };
 
   // استخراج رنگ اصلی از bgColor برای سایه (طیف آبی و سرمه‌ای)
   const extractShadowColor = (bgColor) => {
@@ -463,8 +464,8 @@ const SpecialOffers = () => {
             })}
         </div>
         
-        {/* بنر اضافی */}
-        <div className="mt-8 sm:mt-10 lg:mt-12 bg-gradient-to-r from-blue-700 via-indigo-800 to-slate-900 rounded-2xl p-4 sm:p-6 lg:p-8 text-white text-center shadow-2xl">
+        {/* بنر اضافی - باشگاه مشتریان موقتاً غیرفعال */}
+        {/* <div className="mt-8 sm:mt-10 lg:mt-12 bg-gradient-to-r from-blue-700 via-indigo-800 to-slate-900 rounded-2xl p-4 sm:p-6 lg:p-8 text-white text-center shadow-2xl">
           <h3 className="text-lg sm:text-xl lg:text-2xl font-bold mb-3 sm:mb-4">عضویت در باشگاه مشتریان</h3>
           <p className="text-sm sm:text-base lg:text-lg mb-4 sm:mb-5 lg:mb-6 opacity-90">
             با عضویت در باشگاه مشتریان ما، از تخفیف‌های ویژه و پیشنهادات منحصر به فرد باخبر شوید
@@ -475,7 +476,7 @@ const SpecialOffers = () => {
           >
             عضویت رایگان
           </button>
-        </div>
+        </div> */}
       </div>
     </div>
   );

@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <system.webServer>
+    <rewrite>
+      <rules>
+        <!-- Proxy صفحه لیست محصولات ترب و sitemap به سرور Express -->
+        <!-- این rule باید قبل از Static Files باشد تا sitemap.xml به Express برود -->
+        <rule name="Torob Products and Sitemap" stopProcessing="true">
+          <match url="^(torob-products|sitemap\.xml)$" />
+          <action type="Rewrite" url="http://localhost:4000/{R:0}" />
+          <serverVariables>
+            <set name="HTTP_ACCEPT_ENCODING" value="" />
+          </serverVariables>
+        </rule>
+        
+        <!-- مستثنی کردن فایل‌های استاتیک از rewrite -->
+        <!-- sitemap.xml از این rule مستثنی است چون قبلاً handle شده -->
+        <!-- XML از pattern حذف شده تا sitemap.xml به Express برود -->
+        <rule name="Static Files" stopProcessing="true">
+          <match url="^(assets|_next|static|favicon|images|fonts|.*\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|json|txt|pdf))" />
+          <action type="None" />
+        </rule>
+        
+        <!-- Proxy مسیرهای API و Payment Callback به سرور Express -->
+        <!-- نیاز به نصب Application Request Routing (ARR) دارد -->
+        <!-- برای نصب ARR: https://www.iis.net/downloads/microsoft/application-request-routing -->
+        <rule name="API and Payment Callback" stopProcessing="true">
+          <match url="^(api/|payment/)" />
+          <action type="Rewrite" url="http://localhost:4000/{R:0}" />
+          <serverVariables>
+            <set name="HTTP_ACCEPT_ENCODING" value="" />
+          </serverVariables>
+        </rule>
+        
+        <!-- Proxy صفحات محصول به سرور Express برای ربات‌ها (مثل ترب) -->
+        <rule name="Product Pages for Bots" stopProcessing="true">
+          <match url="^product/([^/]+)/([^/]+)$" />
+          <conditions logicalGrouping="MatchAny">
+            <add input="{HTTP_USER_AGENT}" pattern=".*(bot|crawler|spider|torob|google|bing|yandex|facebookexternalhit).*" ignoreCase="true" />
+            <add input="{QUERY_STRING}" pattern=".*_escaped_fragment_.*" />
+          </conditions>
+          <action type="Rewrite" url="http://localhost:4000/product/{R:1}/{R:2}" />
+          <serverVariables>
+            <set name="HTTP_ACCEPT_ENCODING" value="" />
+          </serverVariables>
+        </rule>
+        
+        <!-- React Router - فقط برای مسیرهای غیر فایل -->
+        <rule name="React Router" stopProcessing="true">
+          <match url=".*" />
+          <conditions logicalGrouping="MatchAll">
+            <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="true" />
+            <add input="{REQUEST_FILENAME}" matchType="IsDirectory" negate="true" />
+            <!-- مستثنی کردن مسیرهای API و Payment Callback و Torob -->
+            <add input="{REQUEST_URI}" pattern="^/api/" negate="true" />
+            <add input="{REQUEST_URI}" pattern="^/payment/" negate="true" />
+            <add input="{REQUEST_URI}" pattern="^/torob-products" negate="true" />
+            <add input="{REQUEST_URI}" pattern="^/sitemap\.xml" negate="true" />
+          </conditions>
+          <action type="Rewrite" url="/index.html" />
+        </rule>
+      </rules>
+    </rewrite>
+    <staticContent>
+      <!-- MIME Types برای فایل‌های JavaScript -->
+      <mimeMap fileExtension=".js" mimeType="application/javascript" />
+      <mimeMap fileExtension=".mjs" mimeType="application/javascript" />
+      <mimeMap fileExtension=".jsx" mimeType="application/javascript" />
+      
+      <!-- MIME Types برای فایل‌های CSS -->
+      <mimeMap fileExtension=".css" mimeType="text/css" />
+      
+      <!-- MIME Types برای فایل‌های JSON -->
+      <mimeMap fileExtension=".json" mimeType="application/json" />
+      
+      <!-- MIME Types برای فایل‌های تصویری -->
+      <mimeMap fileExtension=".webp" mimeType="image/webp" />
+      <mimeMap fileExtension=".svg" mimeType="image/svg+xml" />
+      <mimeMap fileExtension=".png" mimeType="image/png" />
+      <mimeMap fileExtension=".jpg" mimeType="image/jpeg" />
+      <mimeMap fileExtension=".jpeg" mimeType="image/jpeg" />
+      <mimeMap fileExtension=".gif" mimeType="image/gif" />
+      <mimeMap fileExtension=".ico" mimeType="image/x-icon" />
+      
+      <!-- MIME Types برای فونت‌ها -->
+      <mimeMap fileExtension=".woff" mimeType="font/woff" />
+      <mimeMap fileExtension=".woff2" mimeType="font/woff2" />
+      <mimeMap fileExtension=".ttf" mimeType="font/ttf" />
+      <mimeMap fileExtension=".eot" mimeType="application/vnd.ms-fontobject" />
+    </staticContent>
+    <httpProtocol>
+      <customHeaders>
+        <add name="X-Content-Type-Options" value="nosniff" />
+        <add name="X-Frame-Options" value="DENY" />
+        <add name="X-XSS-Protection" value="1; mode=block" />
+      </customHeaders>
+    </httpProtocol>
+  </system.webServer>
+</configuration>
+

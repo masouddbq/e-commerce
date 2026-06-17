@@ -1,0 +1,231 @@
+// ============================================
+// کد Callback Route (اصلاح شده)
+// فایل: server/index.js
+// Route: GET /payment/callback
+// ============================================
+// ⭐ تغییرات اصلی:
+// 1. ابتدا verify می‌کنیم، سپس وضعیت را تغییر می‌دهیم
+// 2. Authority را trim می‌کنیم تا فضاهای اضافی نداشته باشد
+// 3. اگر verify موفق بود → paid
+// 4. اگر verify ناموفق بود → failed
+// ============================================
+
+// Payment callback route - باید قبل از /api/payment باشد
+app.get('/payment/callback', async (req, res) => {
+  let orderId = null;
+  
+  try {
+    // Trim کردن Authority برای اطمینان از عدم وجود فضاهای اضافی
+    const Authority = req.query.Authority ? String(req.query.Authority).trim() : null;
+    const Status = req.query.Status ? String(req.query.Status).trim() : null;
+    
+    console.log('[Payment Callback] دریافت callback:', { Authority, Status });
+    
+    // اگر Status غیر OK است، پرداخت لغو شده
+    if (Status !== 'OK') {
+      console.log('[Payment Callback] ⚠️ Status غیر OK است، پرداخت لغو شده:', Status);
+      
+      // اگر Authority داریم، وضعیت را به failed تغییر بده
+      if (Authority) {
+        try {
+          const { data: order } = await supabaseAdmin
+            .from('orders')
+            .select('id')
+            .eq('payment_authority', Authority)
+            .limit(1)
+            .maybeSingle();
+          
+          if (order) {
+            await supabaseAdmin
+              .from('orders')
+              .update({
+                payment_status: 'failed',
+                payment_verified_at: new Date().toISOString(),
+              })
+              .eq('id', order.id);
+            console.log('[Payment Callback] ✅ وضعیت سفارش به failed تغییر یافت (orderId:', order.id, ')');
+            orderId = order.id;
+          }
+        } catch (updateError) {
+          console.error('[Payment Callback] ⚠️ خطا در به‌روزرسانی وضعیت به failed:', updateError);
+        }
+      }
+      
+      // Redirect به frontend
+      const frontendUrl = CLIENT_ORIGIN 
+        ? CLIENT_ORIGIN.split(',')[0].trim() 
+        : 'https://lent-shop.ir';
+      const queryParams = new URLSearchParams(req.query);
+      if (orderId) {
+        queryParams.set('orderId', orderId);
+      }
+      return res.redirect(`${frontendUrl}/payment/callback?${queryParams.toString()}`);
+    }
+    
+    // اگر Status=OK است، باید verify کنیم
+    if (!Authority) {
+      console.error('[Payment Callback] ⚠️ Authority موجود نیست');
+      const frontendUrl = CLIENT_ORIGIN 
+        ? CLIENT_ORIGIN.split(',')[0].trim() 
+        : 'https://lent-shop.ir';
+      return res.redirect(`${frontendUrl}/payment/callback?${new URLSearchParams(req.query).toString()}`);
+    }
+    
+    // دریافت اطلاعات سفارش بر اساس authority
+    try {
+      const { data: order, error: orderError } = await supabaseAdmin
+        .from('orders')
+        .select('id, total_amount, payment_status, payment_authority')
+        .eq('payment_authority', Authority)
+        .limit(1)
+        .maybeSingle();
+
+      if (orderError || !order || !order.total_amount) {
+        console.error('[Payment Callback] ⚠️ سفارش یافت نشد یا total_amount ندارد:', {
+          orderError,
+          hasOrder: !!order,
+          hasTotalAmount: order?.total_amount ? true : false,
+          authority: Authority
+        });
+        const frontendUrl = CLIENT_ORIGIN 
+          ? CLIENT_ORIGIN.split(',')[0].trim() 
+          : 'https://lent-shop.ir';
+        return res.redirect(`${frontendUrl}/payment/callback?${new URLSearchParams(req.query).toString()}`);
+      }
+
+      orderId = order.id;
+      
+      // تبدیل مبلغ از تومان به ریال (همانطور که در create payment انجام شد)
+      const amountInRials = Math.round((order.total_amount || 0) * 10);
+      
+      console.log('[Payment Callback] در حال تایید پرداخت:', {
+        orderId: order.id,
+        authority: Authority,
+        amountInRials,
+        totalAmount: order.total_amount
+      });
+      
+      // ⭐ ابتدا verify می‌کنیم، سپس بر اساس نتیجه وضعیت را تغییر می‌دهیم
+      try {
+        const verifyResult = await verifyPayment({ 
+          authority: Authority, 
+          amount: amountInRials 
+        });
+
+        if (verifyResult.success) {
+          // ✅ Verify موفق بود - وضعیت را به paid تغییر بده
+          console.log('[Payment Callback] ✅ Verify موفق بود، وضعیت را به paid تغییر می‌دهیم');
+          
+          const updateData = {
+            payment_status: 'paid',
+            payment_verified_at: new Date().toISOString(),
+          };
+          
+          // اگر refId موجود است، اضافه کن
+          if (verifyResult.refId) {
+            updateData.payment_ref_id = verifyResult.refId;
+          }
+          
+          const updateResult = await supabaseAdmin
+            .from('orders')
+            .update(updateData)
+            .eq('id', order.id);
+          
+          if (updateResult.error) {
+            console.error('[Payment Callback] ⚠️ خطا در به‌روزرسانی وضعیت به paid:', updateResult.error);
+          } else {
+            console.log('[Payment Callback] ✅ وضعیت سفارش به paid تغییر یافت و refId اضافه شد:', {
+              orderId: order.id,
+              authority: Authority,
+              refId: verifyResult.refId
+            });
+          }
+        } else {
+          // ❌ Verify ناموفق بود - وضعیت را به failed تغییر بده
+          console.warn('[Payment Callback] ❌ Verify ناموفق بود، وضعیت را به failed تغییر می‌دهیم:', verifyResult);
+          
+          const updateResult = await supabaseAdmin
+            .from('orders')
+            .update({
+              payment_status: 'failed',
+              payment_verified_at: new Date().toISOString(),
+            })
+            .eq('id', order.id);
+          
+          if (updateResult.error) {
+            console.error('[Payment Callback] ⚠️ خطا در به‌روزرسانی وضعیت به failed:', updateResult.error);
+          } else {
+            console.log('[Payment Callback] ✅ وضعیت سفارش به failed تغییر یافت (orderId:', order.id, ')');
+          }
+        }
+      } catch (verifyError) {
+        // ❌ خطا در verify - وضعیت را به failed تغییر بده
+        console.error('[Payment Callback] ❌ خطا در verify، وضعیت را به failed تغییر می‌دهیم:', verifyError);
+        
+        try {
+          await supabaseAdmin
+            .from('orders')
+            .update({
+              payment_status: 'failed',
+              payment_verified_at: new Date().toISOString(),
+            })
+            .eq('id', order.id);
+          console.log('[Payment Callback] ✅ وضعیت سفارش به failed تغییر یافت (orderId:', order.id, ')');
+        } catch (updateError) {
+          console.error('[Payment Callback] ⚠️ خطا در به‌روزرسانی وضعیت به failed:', updateError);
+        }
+      }
+    } catch (dbError) {
+      console.error('[Payment Callback] خطا در دریافت سفارش از دیتابیس:', dbError);
+    }
+
+    // Redirect به frontend با query parameters
+    const frontendUrl = CLIENT_ORIGIN 
+      ? CLIENT_ORIGIN.split(',')[0].trim() 
+      : 'https://lent-shop.ir';
+    
+    // ساخت query parameters
+    const queryParams = new URLSearchParams(req.query);
+    
+    // اگر orderId پیدا شد، اضافه کن
+    if (orderId) {
+      queryParams.set('orderId', orderId);
+    }
+    
+    const redirectUrl = `${frontendUrl}/payment/callback?${queryParams.toString()}`;
+    console.log('[Payment Callback] Redirect به:', redirectUrl);
+    res.redirect(redirectUrl);
+  } catch (error) {
+    console.error('[Payment Callback] خطای کلی:', error);
+    console.error('[Payment Callback] Stack:', error.stack);
+    // در صورت خطا، باز هم به frontend redirect می‌کنیم
+    const frontendUrl = CLIENT_ORIGIN 
+      ? CLIENT_ORIGIN.split(',')[0].trim() 
+      : 'https://lent-shop.ir';
+    const queryString = new URLSearchParams(req.query).toString();
+    res.redirect(`${frontendUrl}/payment/callback?${queryString}`);
+  }
+});
+
+// ============================================
+// تغییرات اعمال شده:
+// ============================================
+// ✅ 1. Authority و Status را trim می‌کنیم
+// ✅ 2. اگر Status !== 'OK' → وضعیت را به failed تغییر می‌دهیم
+// ✅ 3. ابتدا verify می‌کنیم (نه قبل از آن)
+// ✅ 4. اگر verify.success === true → وضعیت را به paid تغییر می‌دهیم
+// ✅ 5. اگر verify.success === false → وضعیت را به failed تغییر می‌دهیم
+// ✅ 6. اگر verify خطا بدهد → وضعیت را به failed تغییر می‌دهیم
+// ✅ 7. مبلغ از total_amount * 10 (تومان به ریال) محاسبه می‌شود
+// ✅ 8. refId فقط در صورت موفق بودن verify اضافه می‌شود
+
+// ============================================
+// متغیرها و وابستگی‌ها:
+// ============================================
+// req.query.Authority: Authority برگشتی از زرین‌پال (trim شده)
+// req.query.Status: Status برگشتی از زرین‌پال (OK یا NOK)
+// supabaseAdmin: کلاینت Supabase برای دسترسی به دیتابیس
+// verifyPayment: تابع verify از zarinpalService.js
+// CLIENT_ORIGIN: از process.env برای URL فرانت‌اند
+// order.total_amount: مبلغ سفارش به تومان (در دیتابیس)
+// amountInRials: مبلغ به ریال (total_amount * 10)

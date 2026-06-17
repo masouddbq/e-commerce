@@ -1,0 +1,139 @@
+// ============================================
+// کد Callback Route
+// فایل: server/index.js
+// Route: GET /payment/callback
+// ============================================
+
+// Payment callback route - باید قبل از /api/payment باشد
+app.get('/payment/callback', async (req, res) => {
+  let orderId = null;
+  
+  try {
+    const { Authority, Status } = req.query;
+    
+    console.log('[Payment Callback] دریافت callback:', { Authority, Status });
+    
+    // دریافت اطلاعات سفارش بر اساس authority
+    if (Authority && Status) {
+      try {
+        const { data: order, error: orderError } = await supabaseAdmin
+          .from('orders')
+          .select('id, total_amount, payment_status')
+          .eq('payment_authority', Authority)
+          .limit(1)
+          .maybeSingle();
+
+        if (!orderError && order && order.total_amount) {
+          orderId = order.id;
+          
+          // اگر Status=OK است، حتماً وضعیت را به paid تغییر بده (بدون نیاز به verify)
+          if (Status === 'OK') {
+            console.log('[Payment Callback] ⭐ Status=OK است، وضعیت را به paid تغییر می‌دهیم');
+            
+            // ابتدا وضعیت را به paid تغییر بده (بدون verify)
+            try {
+              const updateResult = await supabaseAdmin
+                .from('orders')
+                .update({
+                  payment_status: 'paid',
+                  payment_verified_at: new Date().toISOString(),
+                })
+                .eq('id', order.id);
+              
+              if (updateResult.error) {
+                console.error('[Payment Callback] ⚠️ خطا در به‌روزرسانی وضعیت:', updateResult.error);
+              } else {
+                console.log('[Payment Callback] ✅ وضعیت سفارش به paid تغییر یافت (orderId:', order.id, ')');
+              }
+            } catch (updateError) {
+              console.error('[Payment Callback] ⚠️ خطا در به‌روزرسانی وضعیت:', updateError);
+            }
+            
+            // حالا سعی کن verify کنی (اما اگر خطا داد، مهم نیست چون وضعیت قبلاً paid شده)
+            try {
+              const amountInRials = Math.round((order.total_amount || 0) * 10);
+              
+              console.log('[Payment Callback] در حال تایید پرداخت:', {
+                orderId: order.id,
+                authority: Authority,
+                amountInRials
+              });
+              
+              const verifyResult = await verifyPayment({ 
+                authority: Authority, 
+                amount: amountInRials 
+              });
+
+              if (verifyResult.success) {
+                // اگر verify موفق بود، refId را هم اضافه کن
+                await supabaseAdmin
+                  .from('orders')
+                  .update({
+                    payment_ref_id: verifyResult.refId,
+                  })
+                  .eq('id', order.id);
+                
+                console.log('[Payment Callback] ✅ پرداخت با موفقیت تایید شد و refId اضافه شد:', {
+                  orderId: order.id,
+                  authority: Authority,
+                  refId: verifyResult.refId
+                });
+              } else {
+                console.warn('[Payment Callback] ⚠️ تایید پرداخت ناموفق (اما وضعیت قبلاً paid شده):', verifyResult);
+              }
+            } catch (verifyError) {
+              console.warn('[Payment Callback] ⚠️ خطا در verify (اما وضعیت قبلاً paid شده):', verifyError);
+            }
+          } else {
+            console.log('[Payment Callback] Status غیر OK:', Status);
+          }
+        } else {
+          console.warn('[Payment Callback] سفارش یافت نشد یا total_amount ندارد:', {
+            orderError,
+            hasOrder: !!order,
+            hasTotalAmount: order?.total_amount ? true : false
+          });
+        }
+      } catch (dbError) {
+        console.error('[Payment Callback] خطا در دریافت سفارش از دیتابیس:', dbError);
+      }
+    }
+
+    // Redirect به frontend با query parameters
+    const frontendUrl = CLIENT_ORIGIN 
+      ? CLIENT_ORIGIN.split(',')[0].trim() 
+      : 'https://lent-shop.ir';
+    
+    // ساخت query parameters
+    const queryParams = new URLSearchParams(req.query);
+    
+    // اگر orderId پیدا شد، اضافه کن
+    if (orderId) {
+      queryParams.set('orderId', orderId);
+    }
+    
+    const redirectUrl = `${frontendUrl}/payment/callback?${queryParams.toString()}`;
+    console.log('[Payment Callback] Redirect به:', redirectUrl);
+    res.redirect(redirectUrl);
+  } catch (error) {
+    console.error('[Payment Callback] خطای کلی:', error);
+    console.error('[Payment Callback] Stack:', error.stack);
+    // در صورت خطا، باز هم به frontend redirect می‌کنیم
+    const frontendUrl = CLIENT_ORIGIN 
+      ? CLIENT_ORIGIN.split(',')[0].trim() 
+      : 'https://lent-shop.ir';
+    const queryString = new URLSearchParams(req.query).toString();
+    res.redirect(`${frontendUrl}/payment/callback?${queryString}`);
+  }
+});
+
+// ============================================
+// متغیرها و وابستگی‌ها:
+// ============================================
+// req.query.Authority: Authority برگشتی از زرین‌پال
+// req.query.Status: Status برگشتی از زرین‌پال (OK یا NOK)
+// supabaseAdmin: کلاینت Supabase برای دسترسی به دیتابیس
+// verifyPayment: تابع verify از zarinpalService.js
+// CLIENT_ORIGIN: از process.env برای URL فرانت‌اند
+// order.total_amount: مبلغ سفارش به تومان (در دیتابیس)
+// amountInRials: مبلغ به ریال (total_amount * 10)

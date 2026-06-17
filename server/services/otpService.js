@@ -32,6 +32,8 @@ const toE164Phone = (phone) => {
 };
 
 const ensureUserExists = async (email, phone, e164Phone) => {
+  console.log('[OTP Service] Creating user:', { email, phone, e164Phone });
+  
   const result = await supabaseAdmin.auth.admin.createUser({
     email,
     phone: e164Phone,
@@ -45,6 +47,8 @@ const ensureUserExists = async (email, phone, e164Phone) => {
   if (result.error) {
     const message = (result.error.message || '').toLowerCase();
     const status = Number(result.error.status ?? 0);
+    console.log('[OTP Service] User creation error:', { message, status, error: result.error });
+    
     // Ignore duplicate errors (user already exists)
     if (
       message.includes('already') ||
@@ -52,15 +56,22 @@ const ensureUserExists = async (email, phone, e164Phone) => {
       status === 409 ||
       status === 422
     ) {
+      console.log('[OTP Service] User already exists, continuing...');
       return null;
     }
+    
+    // اگر خطای 422 باشه و مربوط به validation نباشه، throw می‌کنیم
+    console.error('[OTP Service] User creation failed:', result.error);
     throw result.error;
   }
 
+  console.log('[OTP Service] User created successfully:', result.data?.user?.id);
   return result.data?.user ?? null;
 };
 
 const generateMagiclinkOtp = async (email, phone) => {
+  console.log('[OTP Service] Generating magic link OTP:', { email, phone });
+  
   const result = await supabaseAdmin.auth.admin.generateLink({
     type: 'magiclink',
     email,
@@ -72,16 +83,27 @@ const generateMagiclinkOtp = async (email, phone) => {
   });
 
   if (result.error) {
+    console.error('[OTP Service] Magic link generation error:', result.error);
+    console.error('[OTP Service] Error details:', {
+      message: result.error.message,
+      status: result.error.status,
+      code: result.error.code,
+    });
     throw result.error;
   }
 
+  console.log('[OTP Service] Magic link generated successfully');
   return result.data;
 };
 
 export const sendOtpToPhone = async (rawPhone) => {
+  console.log('[OTP Service] sendOtpToPhone called with:', rawPhone);
+  
   const phone = normalizeIranPhoneNumber(rawPhone);
+  console.log('[OTP Service] Normalized phone:', phone);
 
   if (!phone) {
+    console.error('[OTP Service] Invalid phone number:', rawPhone);
     throw new Error('شماره موبایل معتبر نیست');
   }
 
@@ -124,12 +146,21 @@ export const sendOtpToPhone = async (rawPhone) => {
 
   const message = (process.env.OTP_SMS_TEMPLATE ?? 'کد تایید شما: {code}').replace('{code}', supabaseOtp);
 
+  console.log(`[OTP] Attempting to send SMS to ${phone}`);
+  console.log(`[OTP] Message: ${message}`);
+  console.log(`[OTP] OTP Code: ${supabaseOtp}`);
+
   const sendResult = await sendOtpSms(phone, message);
 
+  console.log(`[OTP] SMS send result:`, JSON.stringify(sendResult, null, 2));
+
   if (!sendResult.success) {
-    console.error('Faraz SMS error:', sendResult.providerResponse);
+    console.error('[OTP] Faraz SMS error:', sendResult.providerResponse);
+    console.error('[OTP] Error message:', sendResult.error);
     throw new Error(sendResult.error ?? 'ارسال پیامک ناموفق بود');
   }
+
+  console.log(`[OTP] SMS sent successfully to ${phone}`);
 
   const { error: insertError } = await supabaseAdmin
     .from(OTP_TABLE)

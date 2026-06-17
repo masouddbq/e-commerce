@@ -4,7 +4,7 @@ import process from 'node:process';
 
 const {
   ZARINPAL_MERCHANT_ID,
-  ZARINPAL_SANDBOX = 'true',
+  ZARINPAL_SANDBOX = 'false',
 } = process.env;
 
 const isSandbox = ZARINPAL_SANDBOX === 'true';

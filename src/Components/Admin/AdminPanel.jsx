@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase, uploadProductImage, deleteProductImage, uploadBrandImage, deleteBrandImage } from "../../lib/supabase";
 import BackupManager from './BackupManager';
 import PriceEditor from './PriceEditor';
+import SalesReport from './SalesReport';
+import CommentsManagement from './CommentsManagement';
 import { formatPriceWithUnit } from "../../lib/utils";
 
 const AdminPanel = () => {
@@ -17,7 +19,8 @@ const AdminPanel = () => {
   const [addingProduct, setAddingProduct] = useState(false);
   const [deletingProduct, setDeletingProduct] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
-  const [activeTab, setActiveTab] = useState('products'); // 'products', 'brands', 'price-editor', 'backup'
+  const [activeTab, setActiveTab] = useState('products'); // 'products', 'brake-disc', 'brands', 'price-editor', 'backup', 'sales', 'comments'
+  const [selectedVehicleType, setSelectedVehicleType] = useState(''); // فیلتر نوع خودرو
   
   // SEO: اضافه کردن Meta Tag noindex برای جلوگیری از ایندکس شدن صفحه Admin
   useEffect(() => {
@@ -502,7 +505,7 @@ const AdminPanel = () => {
   const [defaultPadBrands, setDefaultPadBrands] = useState([]);
   
   // گزینه‌های نوع خودرو - پیش‌فرض
-  const vehicleTypeOptions = ['سواری', 'شاسی بلند', 'وانت', 'کامیون', 'اتوبوس'];
+  const vehicleTypeOptions = ['سواری', 'شاسی بلند', 'وانت', 'دیسک ترمز', 'کامیون', 'اتوبوس'];
   
   // State برای فرم محصول
   const [newProduct, setNewProduct] = useState({
@@ -549,6 +552,7 @@ const AdminPanel = () => {
       thickness: '',
       weight: '',
       temperature: '',
+      productCode: '',
       warranty: '',
       features: [''],
       reviewUser: '',
@@ -589,10 +593,34 @@ const AdminPanel = () => {
   // بررسی احراز هویت
   useEffect(() => {
     const adminToken = localStorage.getItem('adminToken');
-    if (!adminToken) {
-      navigate('/login');
+    const adminUser = localStorage.getItem('adminUser');
+    
+    if (!adminToken || !adminUser) {
+      navigate('/admin/login');
       return;
     }
+
+    // بررسی اینکه آیا کاربر واقعاً ادمین است
+    try {
+      const user = JSON.parse(adminUser);
+      const email = (user.email || '').toLowerCase();
+      
+      // فقط admin@lentshop.com می‌تواند به پنل ادمین دسترسی داشته باشد
+      if (email !== 'admin@lentshop.com' && adminToken !== 'local-admin') {
+        // اگر کاربر عادی است، session را پاک کن و به صفحه اصلی بفرست
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUser');
+        navigate('/');
+        return;
+      }
+    } catch (error) {
+      console.error('خطا در بررسی اطلاعات ادمین:', error);
+      localStorage.removeItem('adminToken');
+      localStorage.removeItem('adminUser');
+      navigate('/admin/login');
+      return;
+    }
+
     fetchProducts();
     fetchBrands();
     fetchCategories();
@@ -1018,7 +1046,7 @@ const AdminPanel = () => {
     } catch {}
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminUser');
-    navigate('/login');
+      navigate('/admin/login');
   };
 
   // افزودن محصول جدید
@@ -1071,6 +1099,7 @@ const AdminPanel = () => {
           thickness: newProduct.thickness,
           weight: newProduct.weight,
           temperature: newProduct.temperature,
+          productCode: newProduct.productCode,
           warranty: newProduct.warranty
         },
         features: newProduct.features.filter(f => f.trim() !== ''),
@@ -1135,6 +1164,7 @@ const AdminPanel = () => {
         thickness: "",
         weight: "",
         temperature: "",
+        productCode: "",
         warranty: "",
         features: [""],
         reviewUser: "",
@@ -1193,6 +1223,7 @@ const AdminPanel = () => {
       thickness: product.specifications?.thickness || '',
       weight: product.specifications?.weight || '',
       temperature: product.specifications?.temperature || '',
+      productCode: product.specifications?.productCode || product.productCode || '',
       warranty: product.specifications?.warranty || '',
       features: product.features && product.features.length > 0 ? product.features : [''],
       reviewUser: product.reviews && product.reviews.length > 0 ? product.reviews[0].user : '',
@@ -1356,6 +1387,7 @@ const AdminPanel = () => {
           thickness: newProduct.thickness,
           weight: newProduct.weight,
           temperature: newProduct.temperature,
+          productCode: newProduct.productCode,
           warranty: newProduct.warranty
         },
         features: newProduct.features.filter(f => f.trim() !== ''),
@@ -1508,6 +1540,7 @@ const AdminPanel = () => {
     }
     
     const matchesCategory = !selectedCategory || product.category === selectedCategory;
+    const matchesVehicleType = !selectedVehicleType || product.vehicleType === selectedVehicleType;
     
     // دیباگ برای برند ام‌جی
     if (selectedBrand === 'ام‌جی' || selectedBrand === 'ام جی') {
@@ -1519,7 +1552,7 @@ const AdminPanel = () => {
       });
     }
     
-    return matchesSearch && matchesBrand && matchesCategory;
+    return matchesSearch && matchesBrand && matchesCategory && matchesVehicleType;
   });
 
   const productBrands = [...new Set(products.map(p => p.brand).filter(Boolean))];
@@ -1567,6 +1600,19 @@ const AdminPanel = () => {
                مدیریت محصولات
              </button>
             <button
+              onClick={() => {
+                setActiveTab('brake-disc');
+                setSelectedVehicleType('دیسک ترمز');
+              }}
+              className={`px-4 md:px-6 py-2.5 md:py-3 rounded-lg font-medium text-sm md:text-base transition-colors flex-1 sm:flex-none ${
+                activeTab === 'brake-disc'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              مدیریت دیسک ترمز
+            </button>
+            <button
               onClick={() => setActiveTab('brands')}
               className={`px-4 md:px-6 py-2.5 md:py-3 rounded-lg font-medium text-sm md:text-base transition-colors flex-1 sm:flex-none ${
                 activeTab === 'brands'
@@ -1596,11 +1642,151 @@ const AdminPanel = () => {
             >
               بک‌آپ دیتابیس
             </button>
+            <button
+              onClick={() => setActiveTab('sales')}
+              className={`px-4 md:px-6 py-2.5 md:py-3 rounded-lg font-medium text-sm md:text-base transition-colors flex-1 sm:flex-none ${
+                activeTab === 'sales'
+                  ? 'bg-blue-600 text-white'
+                  : activeTab === 'comments'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              گزارش فروش
+            </button>
+            <button
+              onClick={() => setActiveTab('comments')}
+              className={`px-4 md:px-6 py-2.5 md:py-3 rounded-lg font-medium text-sm md:text-base transition-colors flex-1 sm:flex-none ${
+                activeTab === 'comments'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              مدیریت نظرات
+            </button>
             </div>
           </div>
 
                   {/* Conditional Content Based on Active Tab */}
-         {activeTab === 'products' ? (
+         {activeTab === 'brake-disc' ? (
+           <>
+            {/* Brake Disc Products Section Header */}
+            <div className="bg-white rounded-lg shadow-sm p-4 md:p-6 mb-6">
+              <h2 className="text-lg md:text-xl font-bold text-gray-800 text-right">مدیریت محصولات دیسک ترمز</h2>
+              <p className="text-xs md:text-sm text-gray-600 mt-1 text-right">افزودن، ویرایش و مدیریت موجودی محصولات دیسک ترمز</p>
+              <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-xs text-blue-700 text-right">
+                  💡 برای افزودن محصول دیسک ترمز جدید: روی دکمه "افزودن محصول جدید" کلیک کنید و در فیلد "نوع خودرو" گزینه "دیسک ترمز" را انتخاب کنید
+                </p>
+              </div>
+            </div>
+            {/* Search and Filters for Brake Disc */}
+            <div className="bg-white rounded-lg shadow-sm p-4 md:p-6 mb-6 w-full">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 items-stretch w-full">
+                <div className="md:col-span-2 w-full">
+                  <input
+                    type="text"
+                    placeholder="جستجو در محصولات دیسک ترمز..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 md:px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right text-sm md:text-base"
+                  />
+                </div>
+                <div className="w-full">
+                  <select
+                    value={selectedBrand}
+                    onChange={(e) => setSelectedBrand(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 md:px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right text-sm md:text-base"
+                  >
+                    <option value="">همه برندها</option>
+                    {productBrands.map(brand => (
+                      <option key={brand} value={brand}>{brand}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+            {/* Brake Disc Products List - فقط محصولات دیسک ترمز */}
+            <div className="bg-white rounded-lg shadow-sm p-4 md:p-6 mb-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-base md:text-lg font-bold text-gray-800">
+                  محصولات دیسک ترمز ({filteredProducts.filter(p => p.vehicleType === 'دیسک ترمز').length})
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowAddForm(true);
+                    setEditingProduct(null);
+                    resetProductForm();
+                    setNewProduct(prev => ({ ...prev, vehicleType: 'دیسک ترمز' }));
+                  }}
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm md:text-base"
+                >
+                  + افزودن محصول دیسک ترمز جدید
+                </button>
+              </div>
+              {/* Products Grid - فقط دیسک ترمز */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredProducts.filter(p => p.vehicleType === 'دیسک ترمز').map((product) => (
+                  <div key={product.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex justify-between items-start mb-2">
+                      <h4 className="font-semibold text-gray-800 text-sm md:text-base">{product.name}</h4>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleEditProduct(product)}
+                          className="text-blue-600 hover:text-blue-800 text-xs md:text-sm"
+                        >
+                          ویرایش
+                        </button>
+                        <button
+                          onClick={() => setShowDeleteConfirm(product.id)}
+                          className="text-red-600 hover:text-red-800 text-xs md:text-sm"
+                        >
+                          حذف
+                        </button>
+                      </div>
+                    </div>
+                    <div className="text-xs md:text-sm text-gray-600 space-y-1">
+                      <p>قیمت: {formatPriceWithUnit(product.price)}</p>
+                      {product.originalPrice && (
+                        <p>قیمت اصلی: {formatPriceWithUnit(product.originalPrice)}</p>
+                      )}
+                      <p>موجودی: {product.stockCount || 0} عدد</p>
+                      <p>وضعیت: {product.stockStatus || 'موجود'}</p>
+                      {product.image && (
+                        <img src={product.image} alt={product.name} className="w-full h-32 object-cover rounded mt-2" />
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {filteredProducts.filter(p => p.vehicleType === 'دیسک ترمز').length === 0 && (
+                  <div className="col-span-full text-center py-8 text-gray-500">
+                    هیچ محصول دیسک ترمزی یافت نشد
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* Add/Edit Form - استفاده از همان فرم موجود */}
+            {showAddForm && (
+              <div className="bg-white rounded-lg shadow-sm p-4 md:p-6 mb-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-base md:text-lg font-bold">{editingProduct ? 'ویرایش محصول دیسک ترمز' : 'افزودن محصول دیسک ترمز جدید'}</h2>
+                  <button
+                    onClick={() => { 
+                      setShowAddForm(false); 
+                      setEditingProduct(null); 
+                      clearAllImageSelections();
+                      resetProductForm();
+                    }}
+                    className="text-gray-500 hover:text-gray-700 text-xl"
+                  >
+                    ×
+                  </button>
+                </div>
+                {/* استفاده از همان فرم موجود - vehicleType به صورت خودکار "دیسک ترمز" تنظیم می‌شود */}
+              </div>
+            )}
+           </>
+         ) : activeTab === 'products' ? (
            <>
             {/* Products Section Header */}
                          <div className="bg-white rounded-lg shadow-sm p-4 md:p-6 mb-6">
@@ -1645,6 +1831,18 @@ const AdminPanel = () => {
                      <option value="">همه دسته‌ها</option>
                      {productCategories.map(category => (
                        <option key={category} value={category}>{category}</option>
+                     ))}
+                   </select>
+                 </div>
+                 <div className="w-full">
+                   <select
+                     value={selectedVehicleType}
+                     onChange={(e) => setSelectedVehicleType(e.target.value)}
+                     className="w-full border border-gray-300 rounded-lg px-3 md:px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right text-sm md:text-base"
+                   >
+                     <option value="">همه انواع</option>
+                     {productVehicleTypes.map(vehicleType => (
+                       <option key={vehicleType} value={vehicleType}>{vehicleType}</option>
                      ))}
                    </select>
                  </div>
@@ -1752,6 +1950,7 @@ const AdminPanel = () => {
                  <input className="border rounded-lg px-3 py-2 w-full" placeholder="ضخامت (thickness)" value={newProduct.thickness} onChange={(e)=>setNewProduct({...newProduct,thickness:e.target.value})} />
                  <input className="border rounded-lg px-3 py-2 w-full" placeholder="وزن (weight)" value={newProduct.weight} onChange={(e)=>setNewProduct({...newProduct,weight:e.target.value})} />
                  <input className="border rounded-lg px-3 py-2 w-full" placeholder="دمای مقاوم (temperature)" value={newProduct.temperature} onChange={(e)=>setNewProduct({...newProduct,temperature:e.target.value})} />
+                 <input className="border rounded-lg px-3 py-2 w-full" placeholder="کد محصول (productCode)" value={newProduct.productCode} onChange={(e)=>setNewProduct({...newProduct,productCode:e.target.value})} />
                  <input className="border rounded-lg px-3 py-2 w-full" placeholder="گارانتی (warranty)" value={newProduct.warranty} onChange={(e)=>setNewProduct({...newProduct,warranty:e.target.value})} />
                  
                  {/* Features Section */}
@@ -2283,6 +2482,16 @@ const AdminPanel = () => {
           <>
             {/* Price Editor */}
             <PriceEditor />
+          </>
+        ) : activeTab === 'sales' ? (
+          <>
+            {/* Sales Report */}
+            <SalesReport />
+          </>
+        ) : activeTab === 'comments' ? (
+          <>
+            {/* Comments Management */}
+            <CommentsManagement />
           </>
         ) : (
           <>

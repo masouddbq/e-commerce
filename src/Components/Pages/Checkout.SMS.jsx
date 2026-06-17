@@ -30,6 +30,8 @@ const Checkout = () => {
   const [fullName, setFullName] = useState('');
   const [address, setAddress] = useState('');
   const [postalCode, setPostalCode] = useState('');
+  const [shippingCompany, setShippingCompany] = useState('post'); // 'post' یا 'tipax'
+  const [usePostalForMashhad, setUsePostalForMashhad] = useState(false); // برای مشهدی‌هایی که می‌خواهند با پست/تیپاکس ارسال کنند
   const [submitError, setSubmitError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -88,6 +90,27 @@ const Checkout = () => {
     setAuthError('');
     try {
       setIsSendingOtp(true);
+      
+      // بررسی اینکه API_BASE_URL تنظیم شده
+      // برای لوکال: localhost:4000 مجاز است
+      // برای production: باید URL واقعی باشه
+      const isLocalhost = API_BASE_URL?.includes('localhost') || API_BASE_URL?.includes('127.0.0.1');
+      const isProduction = import.meta.env.PROD;
+      
+      if (!API_BASE_URL) {
+        console.error('API_BASE_URL not configured:', API_BASE_URL);
+        throw new Error('تنظیمات سرور کامل نیست. لطفاً با پشتیبانی تماس بگیرید.');
+      }
+      
+      // فقط در production بررسی می‌کنیم که localhost نباشه
+      if (isProduction && isLocalhost) {
+        console.error('API_BASE_URL cannot be localhost in production:', API_BASE_URL);
+        throw new Error('تنظیمات سرور کامل نیست. لطفاً با پشتیبانی تماس بگیرید.');
+      }
+
+      console.log('Sending OTP request to:', `${API_BASE_URL}/api/otp/send`);
+      console.log('Phone number:', phone);
+
       const response = await fetch(`${API_BASE_URL}/api/otp/send`, {
         method: 'POST',
         headers: {
@@ -96,15 +119,36 @@ const Checkout = () => {
         body: JSON.stringify({ phone }),
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+
+      // اگر response JSON نیست (مثلاً خطای CORS یا Network)
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('Non-JSON response:', text);
+        throw new Error('خطا در ارتباط با سرور. لطفاً اتصال اینترنت خود را بررسی کنید.');
+      }
+
       const result = await response.json();
+      console.log('Response data:', result);
 
       if (!response.ok || !result?.success) {
-        throw new Error(result?.error || 'خطا در ارسال کد.');
+        const errorMsg = result?.error || 'خطا در ارسال کد.';
+        console.error('OTP send error:', errorMsg);
+        throw new Error(errorMsg);
       }
 
       setOtpSent(true);
+      setAuthError(''); // پاک کردن خطا در صورت موفقیت
     } catch (err) {
+      console.error('OTP send exception:', err);
+      // اگر خطای شبکه باشه (CORS, Network error)
+      if (err.name === 'TypeError' && err.message.includes('fetch')) {
+        setAuthError('خطا در ارتباط با سرور. لطفاً اتصال اینترنت و تنظیمات سرور را بررسی کنید.');
+      } else {
       setAuthError(err?.message || 'خطا در ارسال کد.');
+      }
     } finally {
       setIsSendingOtp(false);
     }
@@ -153,7 +197,7 @@ const Checkout = () => {
           }
         } catch {
           // عدم موفقیت در ایجاد پروفایل مانع ادامه فرآیند نمی‌شود.
-        }
+          }
       }
     } catch (err) {
       setAuthError(err?.message || 'کد وارد شده صحیح نیست.');
@@ -175,6 +219,8 @@ const Checkout = () => {
       setFullName('');
       setAddress('');
       setPostalCode('');
+      setShippingCompany('post');
+      setUsePostalForMashhad(false);
       setSubmitError('');
       setAuthError('برای ورود مجدد لطفاً شماره موبایل خود را وارد کنید.');
     } catch (err) {
@@ -200,12 +246,12 @@ const Checkout = () => {
       // اگر OTP غیرفعال باشه، user_id رو NULL می‌ذاریم
       let currentUser = null;
       if (ENABLE_OTP) {
-        const { data: auth } = await supabase.auth.getUser();
+      const { data: auth } = await supabase.auth.getUser();
         currentUser = auth?.user;
-        if (!currentUser) throw new Error('برای نهایی کردن خرید باید وارد شوید');
-        
+      if (!currentUser) throw new Error('برای نهایی کردن خرید باید وارد شوید');
+
         // Upsert profile details (فقط وقتی OTP فعاله)
-        await supabase.from('profiles').upsert({ id: currentUser.id, name: fullName, phone: currentUser.phone || phone });
+      await supabase.from('profiles').upsert({ id: currentUser.id, name: fullName, phone: currentUser.phone || phone });
       }
 
       // Create order
@@ -216,7 +262,8 @@ const Checkout = () => {
         full_name: fullName,
         address,
         postal_code: postalCode,
-        phone: phone || '09000000000'
+        phone: phone || '09000000000',
+        shipping_company: shippingCompany
       };
 
       const { data: orderRows, error: orderErr } = await supabase
@@ -226,6 +273,35 @@ const Checkout = () => {
         .limit(1);
       if (orderErr) throw orderErr;
       const orderId = orderRows?.[0]?.id;
+
+      // تولید و ذخیره شماره سفارش یونیک
+      const generateOrderNumber = () => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        const random = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+        return `ORD-${year}${month}${day}-${hours}${minutes}${seconds}-${random}`;
+      };
+
+      // تولید و ذخیره شماره سفارش یونیک
+      const orderNumber = generateOrderNumber();
+      console.log('[Checkout] در حال ذخیره order_number:', orderNumber, 'برای orderId:', orderId);
+      
+      const { error: orderNumberError } = await supabase
+        .from('orders')
+        .update({ order_number: orderNumber })
+        .eq('id', orderId);
+      
+      if (orderNumberError) {
+        console.error('[Checkout] ⚠️ خطا در ذخیره order_number:', orderNumberError);
+        // ادامه می‌دهیم حتی اگر ذخیره نشد
+      } else {
+        console.log('[Checkout] ✅ order_number با موفقیت ذخیره شد:', orderNumber);
+      }
 
       // Insert order items
       const itemsPayload = normalizedItems.map(it => ({
@@ -263,7 +339,7 @@ const Checkout = () => {
 
       // پاک کردن سبد خرید با تاخیر کوچک تا navigate کامل بشه
       setTimeout(() => {
-        clearCart();
+      clearCart();
       }, 100);
     } catch (err) {
       setSubmitError(err?.message || 'خطا در ثبت سفارش');
@@ -314,7 +390,7 @@ const Checkout = () => {
                 
                 {!otpSent ? (
                   <button 
-                    onClick={handleSendOtp}
+                    onClick={handleSendOtp} 
                     disabled={isSendingOtp || !phone}
                     className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white rounded-lg py-3 font-semibold transition-colors flex items-center justify-center gap-2"
                   >
@@ -342,8 +418,8 @@ const Checkout = () => {
                         className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all" 
                       />
                     </div>
-                    <button
-                      onClick={handleVerifyOtp}
+                    <button 
+                      onClick={handleVerifyOtp} 
                       disabled={isVerifyingOtp || !otpCode}
                       className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed text-white rounded-lg py-3 font-semibold transition-colors flex items-center justify-center gap-2"
                     >
@@ -527,6 +603,107 @@ const Checkout = () => {
                       className="w-full border border-gray-200 rounded-lg px-4 py-3 bg-gray-50 text-gray-600 cursor-not-allowed" 
                     />
                   </div>
+                  
+                  <div className="md:col-span-2">
+                    {(() => {
+                      // بررسی اینکه آیا کاربر ساکن مشهد است
+                      const isMashhad = address.toLowerCase().includes('مشهد') || 
+                                       address.toLowerCase().includes('mashhad');
+                      const postalStartsWith9 = postalCode && postalCode.startsWith('9');
+                      const isMashhadResident = isMashhad && postalStartsWith9;
+                      
+                      return (
+                        <>
+                          {isMashhadResident && !usePostalForMashhad && (
+                            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                              <div className="flex items-start gap-3">
+                                <svg className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                                <div className="flex-1">
+                                  <p className="text-sm font-semibold text-green-800 mb-1">ارسال رایگان با پیک در مشهد</p>
+                                  <p className="text-xs text-green-700">ارسال شما به صورت رایگان با پیک انجام می‌شود.</p>
+                                  <button
+                                    type="button"
+                                    onClick={() => setUsePostalForMashhad(true)}
+                                    className="mt-2 text-xs text-green-700 hover:text-green-800 underline"
+                                  >
+                                    در صورت نیاز به ارسال با پست یا تیپاکس کلیک کنید
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {(usePostalForMashhad || !isMashhadResident) && (
+                            <>
+                              {isMashhadResident && usePostalForMashhad && (
+                                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                  <div className="flex items-center gap-2">
+                                    <svg className="w-4 h-4 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                    </svg>
+                                    <p className="text-xs text-yellow-800">شما در حال انتخاب ارسال با پست/تیپاکس هستید (پس کرایه)</p>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setUsePostalForMashhad(false);
+                                        setShippingCompany('post');
+                                      }}
+                                      className="mr-auto text-xs text-yellow-700 hover:text-yellow-800 underline"
+                                    >
+                                      بازگشت به ارسال رایگان با پیک
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              <label className="block text-sm font-medium text-gray-700 mb-2">شرکت ارسال کننده *</label>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <label className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                                  shippingCompany === 'post' 
+                                    ? 'border-blue-600 bg-blue-50' 
+                                    : 'border-gray-300 hover:border-gray-400'
+                                }`}>
+                                  <input
+                                    type="radio"
+                                    name="shippingCompany"
+                                    value="post"
+                                    checked={shippingCompany === 'post'}
+                                    onChange={(e) => setShippingCompany(e.target.value)}
+                                    className="w-5 h-5 text-blue-600 focus:ring-blue-500"
+                                  />
+                                  <div className="flex-1">
+                                    <span className="font-semibold text-gray-800">پست</span>
+                                    <span className="text-sm text-gray-600 mr-2">(پس کرایه)</span>
+                                  </div>
+                                </label>
+                                
+                                <label className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                                  shippingCompany === 'tipax' 
+                                    ? 'border-blue-600 bg-blue-50' 
+                                    : 'border-gray-300 hover:border-gray-400'
+                                }`}>
+                                  <input
+                                    type="radio"
+                                    name="shippingCompany"
+                                    value="tipax"
+                                    checked={shippingCompany === 'tipax'}
+                                    onChange={(e) => setShippingCompany(e.target.value)}
+                                    className="w-5 h-5 text-blue-600 focus:ring-blue-500"
+                                  />
+                                  <div className="flex-1">
+                                    <span className="font-semibold text-gray-800">تیپاکس</span>
+                                    <span className="text-sm text-gray-600 mr-2">(پس کرایه)</span>
+                                  </div>
+                                </label>
+                              </div>
+                            </>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
                 </div>
               </div>
             </div>
@@ -554,7 +731,21 @@ const Checkout = () => {
                   
                   <div className="flex items-center justify-between text-gray-600 text-sm">
                     <span>هزینه ارسال:</span>
-                    <span className="font-semibold text-green-600">رایگان</span>
+                    <span className="font-semibold text-green-600">
+                      {(() => {
+                        // بررسی اینکه آیا کاربر ساکن مشهد است (هم آدرس و هم کد پستی)
+                        const isMashhad = address.toLowerCase().includes('مشهد') || 
+                                         address.toLowerCase().includes('mashhad');
+                        const postalStartsWith9 = postalCode && postalCode.startsWith('9');
+                        const isMashhadResident = isMashhad && postalStartsWith9;
+                        
+                        if (isMashhadResident && !usePostalForMashhad) {
+                          return 'مشهد رایگان';
+                        } else {
+                          return 'شهرهای دیگر پس کرایه';
+                        }
+                      })()}
+                    </span>
                   </div>
                   
                   <div className="border-t border-gray-200 pt-3">

@@ -5,7 +5,6 @@ import CreditCardIcon from '@mui/icons-material/CreditCard';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import SecurityIcon from '@mui/icons-material/Security';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import ErrorIcon from '@mui/icons-material/Error';
 import LoadingIcon from '@mui/icons-material/HourglassEmpty';
 
 const PaymentForm = ({ orderData: propOrderData }) => {
@@ -13,7 +12,10 @@ const PaymentForm = ({ orderData: propOrderData }) => {
   const location = useLocation();
   
   const [selectedMethod, setSelectedMethod] = useState(PAYMENT_METHODS.ONLINE.id);
-  const [selectedGateway, setSelectedGateway] = useState('ZARINPAL');
+  // مطمئن می‌شویم که ZARINPAL فعال است
+  const [selectedGateway, setSelectedGateway] = useState(
+    PAYMENT_GATEWAYS.ZARINPAL?.enabled ? 'ZARINPAL' : Object.keys(PAYMENT_GATEWAYS).find(key => PAYMENT_GATEWAYS[key]?.enabled) || 'ZARINPAL'
+  );
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
   const [paymentManager] = useState(new PaymentManager());
@@ -61,7 +63,9 @@ const PaymentForm = ({ orderData: propOrderData }) => {
   };
 
   const handleGatewayChange = (gatewayName) => {
-    setSelectedGateway(gatewayName);
+    if (gatewayName) {
+      setSelectedGateway(gatewayName);
+    }
     setError('');
   };
 
@@ -205,9 +209,6 @@ const PaymentForm = ({ orderData: propOrderData }) => {
                   <div className="text-xs text-gray-600">
                     {gateway.enabled ? 'فعال' : 'غیرفعال'}
                   </div>
-                  {gateway.sandbox && (
-                    <div className="text-xs text-orange-600 mt-1">نسخه تست</div>
-                  )}
                 </div>
               </div>
             ))}
@@ -228,37 +229,38 @@ const PaymentForm = ({ orderData: propOrderData }) => {
         </ul>
       </div>
 
-      {/* Error Display */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
-          <div className="flex items-center gap-2">
-            <ErrorIcon className="text-red-600" />
-            <span className="text-red-800 font-semibold">خطا</span>
-          </div>
-          <p className="text-red-700 text-sm mt-1">{error}</p>
-        </div>
-      )}
-
       {/* Payment Button */}
       <div className="space-y-3">
         {selectedMethod === PAYMENT_METHODS.ONLINE.id ? (
-          <button
-            onClick={handlePayment}
-            disabled={isProcessing || !selectedGateway}
-            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl py-4 font-bold text-lg shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
-          >
-            {isProcessing ? (
-              <>
-                <LoadingIcon className="animate-spin" />
-                در حال اتصال به درگاه...
-              </>
-            ) : (
-              <>
-                <CreditCardIcon />
-                پرداخت آنلاین
-              </>
+          <>
+            <button
+              onClick={handlePayment}
+              disabled={isProcessing || !selectedGateway || !PAYMENT_GATEWAYS[selectedGateway]?.enabled}
+              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl py-4 font-bold text-lg shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+            >
+              {isProcessing ? (
+                <>
+                  <LoadingIcon className="animate-spin" />
+                  در حال اتصال به درگاه...
+                </>
+              ) : (
+                <>
+                  <CreditCardIcon />
+                  پرداخت آنلاین
+                </>
+              )}
+            </button>
+            
+            {/* دکمه تست (فقط در development) */}
+            {import.meta.env.DEV && (
+              <button
+                onClick={() => navigate(`/payment/callback?test=true&Status=OK&Authority=test123&orderId=${orderId}`)}
+                className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl py-3 font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+              >
+                🧪 تست پرداخت موفق (بدون پرداخت واقعی)
+              </button>
             )}
-          </button>
+          </>
         ) : (
           <button
             onClick={handleCardToCardPayment}

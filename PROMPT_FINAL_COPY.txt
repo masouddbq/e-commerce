@@ -1,0 +1,42 @@
+I have a React SPA on IIS with Express.js backend. Product routes `/product/:brand/:productId` should be rewritten to Express for SSR with meta tags.
+
+What works:
+- Express server works: `curl http://localhost:4000/api/product/toyota/996` returns HTML with meta tags ✅
+- Express logs show meta tags are injected correctly ✅
+- web.config is correctly configured with rule "Product SSR Proxy" ✅
+- Server-level rules checked multiple times - NO rules exist at server level ✅
+
+What doesn't work:
+- `curl https://lent-shop.ir/product/toyota/996` returns only 41 characters (should be thousands) ❌
+- No X-SSR header in response ❌
+- No product_id meta tag in response ❌
+- Response length: 41 characters (should be 3000+)
+
+Current configuration:
+- IIS with URL Rewrite Module and ARR enabled
+- web.config contains rule "Product SSR Proxy" with pattern `^product/.*` rewriting to `http://localhost:4000/api/{R:0}`
+- ARR Proxy is enabled
+- Disk Cache is disabled
+- Server-level rules: NONE (checked multiple times)
+
+The issue:
+Even though Express works, web.config is correct, no server-level rules exist, and ARR is enabled, the IIS rewrite rule is NOT executing. The request is NOT reaching Express. Response is only 41 characters.
+
+What we've tried:
+1. Simplified web.config to single rule
+2. Changed from AbortRequest to CustomResponse 404 to simple rewrite
+3. Disabled ARR Disk Cache
+4. Checked server-level rules multiple times (none exist)
+5. Verified rule order in site-level
+6. Restarted IIS multiple times
+7. Added X-SSR header to Express (works when accessed directly)
+8. Pattern test in IIS Manager shows rule matches correctly
+
+Current status:
+- Pattern test: ✅ Matches
+- Express direct: ✅ Works
+- IIS rewrite: ❌ Not executing
+- Server-level rules: ✅ None exist
+
+Please provide a solution in Persian (Farsi) that diagnoses why the rewrite rule is not executing despite correct configuration and provides step-by-step fix instructions with verification steps.
+

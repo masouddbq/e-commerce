@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { formatPriceWithUnit } from '../../lib/utils';
 
@@ -43,6 +43,8 @@ const SpecialsPage = () => {
 	const [error, setError] = useState(null);
 	const [page, setPage] = useState(1);
 	const pageSize = 20;
+	const [searchParams] = useSearchParams();
+	const filter = searchParams.get('filter'); // bestseller یا discount
 
 	useEffect(() => {
 		const fetchSpecials = async () => {
@@ -50,26 +52,53 @@ const SpecialsPage = () => {
 				setLoading(true);
 				setError(null);
 				
-			// دریافت همه محصولات با نشان‌های مختلف
-				const { data, error } = await supabase
+				let query = supabase
 					.from('products')
-					.select('*')
-					.or('badges->>new.eq.true,badges->>bestseller.eq.true,badges->>discount.eq.true')
-					.order('updated_at', { ascending: false });
+					.select('*');
 				
-				if (error) throw error;
+				// اگر فیلتر مشخص شده باشد، فقط آن نوع را بگیر
+				if (filter === 'bestseller') {
+					query = query.eq('badges->>bestseller', 'true');
+				} else if (filter === 'discount') {
+					// برای تخفیف‌دارها، همه محصولات را بگیریم و فیلتر کنیم
+					query = query.or('badges->>discount.eq.true,originalPrice.not.is.null');
+				} else {
+			// دریافت همه محصولات با نشان‌های مختلف
+					query = query.or('badges->>new.eq.true,badges->>bestseller.eq.true,badges->>discount.eq.true');
+				}
 				
-				// فیلتر محصولات: شامل محصولات جدید، پرفروش و تخفیف‌دار
-				// توجه: محصولات تخفیف‌دار بر اساس badge نمایش داده می‌شوند، نه بر اساس تفاوت قیمت
-				const filtered = (data || []).filter((p) => {
-					// محصولات جدید
+				const { data, error: queryError } = await query.order('updated_at', { ascending: false });
+				
+				if (queryError) throw queryError;
+				
+				// فیلتر محصولات
+				let filtered = (data || []);
+				
+				if (filter === 'discount') {
+					// فیلتر کردن محصولاتی که واقعاً تخفیف دارند
+					filtered = filtered.filter((p) => {
+						if (p.badges?.discount === true) return true;
+						if (p.originalPrice && p.price) {
+							const originalPrice = parseInt(p.originalPrice.toString().replace(/,/g, ''));
+							const currentPrice = parseInt(p.price.toString().replace(/,/g, ''));
+							if (!isNaN(originalPrice) && !isNaN(currentPrice) && originalPrice > currentPrice) {
+								return true;
+							}
+						}
+						return false;
+					});
+				} else if (filter === 'bestseller') {
+					// فقط پرفروش‌ها
+					filtered = filtered.filter((p) => p.badges?.bestseller === true);
+				} else {
+					// همه محصولات با badge
+					filtered = filtered.filter((p) => {
 					if (p.badges?.new) return true;
-					// محصولات پرفروش
 					if (p.badges?.bestseller) return true;
-					// محصولات تخفیف‌دار (اگر badge فعال باشد، نمایش بده)
 					if (p.badges?.discount) return true;
 					return false;
 				});
+				}
 				
 				console.log('Products with badges:', data);
 				console.log('Filtered products:', filtered);
@@ -81,7 +110,7 @@ const SpecialsPage = () => {
 			}
 		};
 		fetchSpecials();
-	}, []);
+	}, [filter]);
 
 	const totalPages = Math.max(1, Math.ceil(products.length / pageSize));
 	const start = (page - 1) * pageSize;
@@ -117,8 +146,16 @@ const SpecialsPage = () => {
 			<div className="min-h-screen bg-gray-50">
 			<div className="bg-white shadow-sm border-b">
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-					<h1 className="text-3xl font-bold text-gray-900 text-center">محصولات ویژه و جدید</h1>
-					<p className="text-center text-gray-600 mt-2">تمام محصولات جدید، پرفروش و تخفیف‌دار</p>
+					<h1 className="text-3xl font-bold text-gray-900 text-center">
+						{filter === 'bestseller' ? 'پرفروش‌ترین‌ها' : 
+						 filter === 'discount' ? 'تخفیف‌های ویژه' : 
+						 'محصولات ویژه و جدید'}
+					</h1>
+					<p className="text-center text-gray-600 mt-2">
+						{filter === 'bestseller' ? 'محصولات محبوب و پرفروش که مشتریان ما بیشتر خریداری کرده‌اند' : 
+						 filter === 'discount' ? 'فرصت‌های طلایی خرید با بهترین قیمت‌ها و تخفیف‌های استثنایی' : 
+						 'تمام محصولات جدید، پرفروش و تخفیف‌دار'}
+					</p>
 				</div>
 			</div>
 

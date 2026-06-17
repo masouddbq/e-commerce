@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import HeroSlider from './HeroSlider';
 import BrandCategories from './BrandCategories';
@@ -11,10 +11,12 @@ import QuickSearchModal from '../Common/QuickSearchModal';
 import QuickSearchButton from './QuickSearchButton';
 import SearchIcon from '@mui/icons-material/Search';
 import CategoryIcon from '@mui/icons-material/Category';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { Link } from 'react-router-dom';
 
 const HomePage = () => {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   const openSearchModal = () => {
     setIsSearchModalOpen(true);
@@ -23,6 +25,22 @@ const HomePage = () => {
   const closeSearchModal = () => {
     setIsSearchModalOpen(false);
   };
+
+  // بستن مودال راهنما هنگام کلیک خارج از آن
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isHelpModalOpen && !event.target.closest('.help-modal-container')) {
+        setIsHelpModalOpen(false);
+      }
+    };
+
+    if (isHelpModalOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [isHelpModalOpen]);
 
   return (
     <>
@@ -42,18 +60,45 @@ const HomePage = () => {
       {/* Search Bar - نوار جستجو (فقط دسکتاپ) */}
       <div className="hidden lg:block lg:mb-10 items-center w-full bg-gradient-to-r from-blue-600 to-blue-700 py-3 px-4 sm:px-6 lg:px-32">
         <div className="max-w-2xl bg-white bg-opacity-20 rounded-xl mx-auto">
+          <div className="w-full flex items-center justify-center gap-4 text-white hover:bg-white hover:bg-opacity-20 transition-all duration-300 rounded-lg py-1 px-6 group">
           <button
             onClick={openSearchModal}
-            className="w-full flex items-center justify-center gap-4 text-white hover:bg-white hover:bg-opacity-20 transition-all duration-300 rounded-lg py-1 px-6 group"
+              className="flex items-center justify-center gap-4 flex-1"
           >
             <SearchIcon className="text-xl group-hover:scale-110 transition-transform duration-300" />
             <span className="text-lg font-medium">جستجوی سریع محصولات و برندها</span>
             <SearchIcon className="text-xl group-hover:scale-110 transition-transform duration-300" />
           </button>
+            <div className="relative flex-shrink-0 help-modal-container">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsHelpModalOpen(!isHelpModalOpen);
+                }}
+                onMouseEnter={() => setIsHelpModalOpen(true)}
+                className="p-1 hover:bg-white hover:bg-opacity-30 rounded-full transition-all duration-300"
+                aria-label="راهنما"
+              >
+                <HelpOutlineIcon className="text-lg" />
+              </button>
+              {/* Help Modal - Tooltip */}
+              {isHelpModalOpen && (
+                <div 
+                  className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 sm:w-72 bg-white text-gray-800 rounded-lg shadow-xl p-4 text-sm z-50 border border-gray-200 help-modal-container"
+                  onMouseEnter={() => setIsHelpModalOpen(true)}
+                  onMouseLeave={() => setIsHelpModalOpen(false)}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <p className="text-right leading-relaxed">
+                    توجه کنید که در جستجو هر کلمه محصولات مشابه قابل استفاده نسبت به محصول شما هم نمایش داده خواهد شد
+                  </p>
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-4 border-t-white"></div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
-      
-      <HeroSlider />
       
       {/* Quick Access to Categories Button - دکمه دسترسی سریع به دسته‌بندی‌ها (فقط دسکتاپ) */}
       <div className="hidden lg:block lg:mb-2 lg:mt-8">
@@ -76,6 +121,9 @@ const HomePage = () => {
       <div className="lg:hidden">
         <QuickSearchButton />
       </div>
+      
+      {/* Hero Slider - کاروسل عکس‌ها بالای بخش درباره لنت شاپ */}
+      <HeroSlider />
       
       <AboutSection />
       <CustomerReviews />

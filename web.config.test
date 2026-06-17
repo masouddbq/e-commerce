@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+
+  <system.webServer>
+
+    <!-- ARR Reverse Proxy -->
+    <proxy enabled="true" preserveHostHeader="true" />
+
+    <!-- Force Rewrite before Static -->
+    <handlers>
+      <clear />
+      <add name="StaticFile" path="*" verb="*" 
+           modules="StaticFileModule" resourceType="Either" requireAccess="Read" />
+    </handlers>
+
+    <rewrite>
+      <rules>
+
+        <!-- تست Proxy مستقیم (مرحله 3) -->
+        <rule name="TEST PROXY" stopProcessing="true">
+          <match url="^api/(.*)$" />
+          <action type="Rewrite" url="http://localhost:4000/api/{R:1}" />
+        </rule>
+
+        <!-- SSR for product -->
+        <rule name="Product SSR Proxy" stopProcessing="true">
+          <match url="^product/.*" />
+          <action type="Rewrite" url="http://localhost:4000/api/{R:0}" />
+        </rule>
+
+      </rules>
+    </rewrite>
+
+  </system.webServer>
+
+</configuration>
+

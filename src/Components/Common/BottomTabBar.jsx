@@ -11,7 +11,8 @@ const BottomTabBar = () => {
     // تشخیص تب فعال بر اساس مسیر فعلی
     if (location.pathname.includes('/categories')) return 'categories';
     if (location.pathname.includes('/specials')) return 'featured';
-    if (location.pathname.includes('/club')) return 'club';
+    // باشگاه مشتریان - موقتاً غیرفعال
+    // if (location.pathname.includes('/club')) return 'club';
     return 'home';
   });
 
@@ -42,13 +43,14 @@ const BottomTabBar = () => {
       path: '/categories',
       color: 'text-blue-500'
     },
-    {
-      id: 'club',
-      label: 'باشگاه مشتریان',
-      icon: GroupIcon,
-      path: '/club',
-      color: 'text-blue-500'
-    }
+    // باشگاه مشتریان - موقتاً غیرفعال
+    // {
+    //   id: 'club',
+    //   label: 'باشگاه مشتریان',
+    //   icon: GroupIcon,
+    //   path: '/club',
+    //   color: 'text-blue-500'
+    // }
   ];
 
   const handleTabClick = (tabId) => {

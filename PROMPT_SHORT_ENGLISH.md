@@ -1,0 +1,31 @@
+# Short Prompt for AI (English)
+
+## Problem Summary
+
+I have a React SPA on IIS with Express.js backend. Product routes `/product/:brand/:productId` should be rewritten to Express for SSR with meta tags.
+
+**What works:**
+- Express server works: `curl http://localhost:4000/api/product/toyota/996` returns HTML with meta tags ✅
+- Rules are configured in IIS Manager ✅
+- Rule order is correct: SSR Product Pages → Block SPA for Product → React Router ✅
+
+**What doesn't work:**
+- `curl https://lent-shop.ir/product/toyota/996` returns React SPA HTML (no meta tags) ❌
+- Rewrite rule is not executing despite correct configuration ❌
+
+**Current configuration:**
+- IIS with URL Rewrite Module and ARR
+- Rule "SSR Product Pages": Pattern `^product/([^/]+)/([^/]+)$`, Rewrite to `http://localhost:4000/api/product/{R:1}/{R:2}`, Condition `{HTTPS}=on`
+- Rule "Block SPA for Product": Pattern `^product/.*`, Action `AbortRequest`
+- Rule "React Router": Catch-all for SPA fallback
+- Server-level rules checked and removed
+- ARR Proxy enabled
+
+**The issue:**
+Even though the rules are correctly configured and in the right order, the rewrite to Express is not happening. The request is being caught by React Router instead.
+
+Please provide a solution in **Persian (Farsi)** that:
+1. Diagnoses why the rewrite rule is not executing
+2. Provides step-by-step fix instructions
+3. Includes verification steps
+

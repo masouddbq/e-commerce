@@ -1,0 +1,87 @@
+// ============================================
+// کد API Verify Route
+// فایل: server/routes/payment.js
+// Route: POST /api/payment/verify
+// ============================================
+
+/**
+ * تایید پرداخت
+ * POST /api/payment/verify
+ */
+router.post('/verify', async (req, res) => {
+  try {
+    const { authority, amount, orderId } = req.body;
+
+    if (!authority) {
+      return res.status(400).json({
+        success: false,
+        error: 'Authority الزامی است',
+      });
+    }
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'مبلغ پرداخت نامعتبر است',
+      });
+    }
+
+    const result = await verifyPayment({ authority, amount });
+
+    if (result.success && orderId) {
+      // به‌روزرسانی وضعیت سفارش در دیتابیس
+      try {
+        await supabaseAdmin
+          .from('orders')
+          .update({
+            payment_status: 'paid',
+            payment_ref_id: result.refId,
+            payment_verified_at: new Date().toISOString(),
+          })
+          .eq('id', orderId);
+      } catch (dbError) {
+        console.error('خطا در به‌روزرسانی سفارش:', dbError);
+        // ادامه می‌دهیم حتی اگر به‌روزرسانی نشد
+      }
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error('خطا در تایید پرداخت:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'خطا در تایید پرداخت',
+    });
+  }
+});
+
+// ============================================
+// Request Body:
+// ============================================
+// {
+//   "authority": "A00000000000000000000000000",
+//   "amount": 50000,  // به ریال
+//   "orderId": "123"  // اختیاری
+// }
+
+// ============================================
+// Response (موفق):
+// ============================================
+// {
+//   "success": true,
+//   "refId": "123456789",
+//   "cardHash": "...",
+//   "cardPan": "...",
+//   "fee": 0,
+//   "feeType": "...",
+//   "code": 100
+// }
+
+// ============================================
+// Response (ناموفق):
+// ============================================
+// {
+//   "success": false,
+//   "error": "خطا در تایید پرداخت",
+//   "code": 101  // یا کد خطای دیگر
+// }

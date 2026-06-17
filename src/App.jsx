@@ -12,11 +12,13 @@ import Breadcrumbs from './Components/Common/Breadcrumbs'
 import ScrollToTop from './Components/Common/ScrollToTop'
 import HomePage from './Components/HomePage/HomePage'
 import Vehicle from './Components/Categories/Vehicle';
+import BrakeDisc from './Components/Categories/BrakeDisc';
 import Suv from './Components/Categories/Suv';
 import Pickup from './Components/Categories/Pickup';
 import ContactUs from './Components/Pages/ContactUs';
 import AboutUs from './Components/Pages/AboutUs';
-import CustomerClub from './Components/Pages/CustomerClub';
+// باشگاه مشتریان - موقتاً غیرفعال (کامپوننت در سورس کد باقی می‌ماند)
+// import CustomerClub from './Components/Pages/CustomerClub';
 import Footer from './Components/Footer/Footer';
 import AdminPanel from './Components/Admin/AdminPanel'
 import Login from './Components/Pages/Login';
@@ -39,6 +41,8 @@ import PaymentVerification from './Components/Payment/PaymentVerification';
 import PaymentTestPage from './Components/Payment/PaymentTestPage';
 import Shipping from './Components/Pages/Shipping';
 import Return from './Components/Pages/Return';
+import UserAccount from './Components/Pages/UserAccount';
+import LoginPage from './Components/Pages/LoginPage';
 
 function App() {
 
@@ -63,12 +67,15 @@ function App() {
               <Route path='/' element={<HomePage />}/>
               <Route path='/categories' element={<CategoriesPage />}/>
               <Route path='/vehicle' element={<Vehicle />}/>
+              <Route path='/brake-disc' element={<BrakeDisc />}/>
               <Route path='/suv' element={<Suv />}/>
               <Route path='/pickup' element={<Pickup />}/>
               <Route path='/contact' element={<ContactUs />}/>
               <Route path='/about' element={<AboutUs />}/>
-              <Route path='/club' element={<CustomerClub />}/>
-              <Route path='/login' element={<Login />}/>
+              {/* باشگاه مشتریان - موقتاً غیرفعال */}
+              {/* <Route path='/club' element={<CustomerClub />}/> */}
+              <Route path='/club' element={<HomePage />}/>
+              <Route path='/admin/login' element={<Login />}/>
               <Route path='/register' element={<Register />}/>
               <Route path='/admin' element={<AdminPanel />}/>
               
@@ -97,6 +104,10 @@ function App() {
               <Route path='/payment/verify' element={<PaymentVerification />}/>
               <Route path='/payment/callback' element={<PaymentVerification />}/>
               <Route path='/payment/test' element={<PaymentTestPage />}/>
+
+              {/* User Account & Login */}
+              <Route path='/account' element={<UserAccount />}/>
+              <Route path='/login' element={<LoginPage />}/>
 
               {/* Footer Pages */}
               <Route path='/terms' element={<Terms />}/>

@@ -1,0 +1,91 @@
+// ============================================
+// 3) کد Verify Payment
+// ============================================
+// فایل: server/services/zarinpalService.js
+// ============================================
+
+/**
+ * تایید پرداخت
+ */
+export const verifyPayment = async ({ authority, amount }) => {
+  if (!ZARINPAL_MERCHANT_ID) {
+    throw new Error('ZARINPAL_MERCHANT_ID تنظیم نشده است');
+  }
+
+  try {
+    const response = await axios.post(
+      `${baseUrl}/payment/verify.json`,
+      {
+        merchant_id: ZARINPAL_MERCHANT_ID,
+        authority,
+        amount: Math.round(amount),  // ⭐ مبلغ به ریال (همان مبلغی که در create payment ارسال شد)
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000,
+      }
+    );
+
+    const { data } = response;
+
+    // ⭐ چک کردن errors
+    if (data.errors) {
+      const errorMessage = data.errors.message || 'خطا در تایید پرداخت';
+      return {
+        success: false,
+        error: errorMessage,
+        code: data.errors.code,
+      };
+    }
+
+    // ⭐ code === 100 → پرداخت موفق
+    if (data.data && data.data.code === 100) {
+      return {
+        success: true,
+        refId: data.data.ref_id,
+        cardHash: data.data.card_hash,
+        cardPan: data.data.card_pan,
+        fee: data.data.fee,
+        feeType: data.data.fee_type,
+        code: data.data.code,
+      };
+    }
+
+    // ⭐ code === 101 → پرداخت تکراری موفق
+    if (data.data && data.data.code === 101) {
+      return {
+        success: false,
+        error: 'این تراکنش قبلاً تایید شده است',
+        code: data.data.code,
+      };
+    }
+
+    // ⭐ سایر کدها → پرداخت ناموفق
+    return {
+      success: false,
+      error: data.data?.message || 'پرداخت ناموفق بود',
+      code: data.data?.code,
+    };
+  } catch (error) {
+    if (error.response?.data) {
+      const zarinpalError = error.response.data;
+      throw new Error(zarinpalError.errors?.message || error.message || 'خطا در ارتباط با زرین‌پال');
+    }
+    throw error;
+  }
+};
+
+// ============================================
+// نکات مهم:
+// ============================================
+// ⭐ amount: باید دقیقاً همان مبلغی باشد که در create payment ارسال شد (به ریال)
+// ⭐ authority: باید دقیقاً همان authority برگشتی از create payment باشد
+// ⭐ code === 100 → پرداخت موفق (success: true)
+// ⭐ code === 101 → پرداخت تکراری موفق (success: false)
+// ⭐ سایر کدها → پرداخت ناموفق (success: false)
+// ⭐ baseUrl: 
+//    - Sandbox: 'https://sandbox.zarinpal.com/pg/v4'
+//    - Production: 'https://api.zarinpal.com/pg/v4'
+// ⭐ amount با Math.round(amount) رند می‌شود

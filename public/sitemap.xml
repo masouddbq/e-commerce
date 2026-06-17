@@ -106,9 +106,9 @@
     <priority>0.6</priority>
   </url>
   
-  <!-- Note: Product pages should be added dynamically -->
+  <!-- Note: This file is deprecated. Use /sitemap.xml (dynamic route) instead -->
+  <!-- Product pages are now added dynamically via Express route -->
   <!-- Brand pages should be added dynamically -->
-  <!-- Consider creating a dynamic sitemap generator script -->
   
 </urlset>
 

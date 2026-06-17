@@ -1,0 +1,195 @@
+// ============================================
+// کد Create Payment Request
+// فایل: server/routes/payment.js
+// Route: POST /api/payment/request
+// ============================================
+
+/**
+ * ایجاد درخواست پرداخت
+ * POST /api/payment/request
+ */
+router.post('/request', async (req, res) => {
+  try {
+    const { amount, description, callbackUrl, orderId, metadata } = req.body;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'مبلغ پرداخت نامعتبر است',
+      });
+    }
+
+    if (!orderId) {
+      return res.status(400).json({
+        success: false,
+        error: 'شماره سفارش الزامی است',
+      });
+    }
+
+    const result = await createPaymentRequest({
+      amount,
+      description: description || `پرداخت سفارش #${orderId}`,
+      callbackUrl: callbackUrl || `${req.protocol}://${req.get('host')}/payment/callback`,
+      metadata: {
+        mobile: metadata?.mobile || metadata?.phone || '',
+        email: metadata?.email || '',
+      },
+    });
+
+    if (result.success) {
+      // ذخیره authority در دیتابیس
+      try {
+        await supabaseAdmin
+          .from('orders')
+          .update({
+            payment_authority: result.authority,
+            payment_status: 'processing',
+          })
+          .eq('id', orderId);
+      } catch (dbError) {
+        console.error('خطا در ذخیره authority:', dbError);
+        // ادامه می‌دهیم حتی اگر ذخیره نشد
+      }
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error('خطا در ایجاد درخواست پرداخت:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'خطا در ایجاد درخواست پرداخت',
+    });
+  }
+});
+
+// ============================================
+// کد createPaymentRequest در zarinpalService.js
+// ============================================
+
+export const createPaymentRequest = async ({ amount, description, callbackUrl, metadata = {} }) => {
+  if (!ZARINPAL_MERCHANT_ID) {
+    throw new Error('ZARINPAL_MERCHANT_ID تنظیم نشده است');
+  }
+
+  console.log('Creating payment request:', {
+    amount,
+    description,
+    callbackUrl,
+    metadata,
+    merchantId: ZARINPAL_MERCHANT_ID,
+    isSandbox,
+  });
+
+  try {
+    // ساخت metadata فقط اگر mobile یا email وجود داشته باشه
+    const paymentMetadata = {};
+    const mobile = String(metadata.mobile || metadata.phone || '').trim();
+    const email = String(metadata.email || '').trim();
+    
+    if (mobile) {
+      paymentMetadata.mobile = mobile;
+    }
+    if (email) {
+      paymentMetadata.email = email;
+    }
+
+    const requestBody = {
+      merchant_id: ZARINPAL_MERCHANT_ID,
+      amount: Math.round(amount),  // ⚠️ مبلغ باید به ریال باشد
+      description: description || 'خرید از لنت شاپ',
+      callback_url: callbackUrl,
+    };
+
+    // فقط اگر metadata داریم، اضافه می‌کنیم
+    if (Object.keys(paymentMetadata).length > 0) {
+      requestBody.metadata = paymentMetadata;
+    }
+
+    const response = await axios.post(
+      `${baseUrl}/payment/request.json`,
+      requestBody,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000,
+      }
+    );
+
+    const { data } = response;
+
+    console.log('Zarinpal response:', JSON.stringify(data, null, 2));
+
+    // چک کردن خطا: اگر errors وجود داشته باشه و خالی نباشه
+    if (data.errors && Array.isArray(data.errors) && data.errors.length > 0) {
+      const errorMessage = data.errors[0]?.message || data.errors.message || 'خطا در ایجاد درخواست پرداخت';
+      console.error('Zarinpal error:', data.errors);
+      throw new Error(errorMessage);
+    }
+
+    if (data.data && data.data.code === 100) {
+      const authority = data.data.authority;
+      const paymentUrl = isSandbox
+        ? `https://sandbox.zarinpal.com/pg/StartPay/${authority}`
+        : `https://www.zarinpal.com/pg/StartPay/${authority}`;
+
+      return {
+        success: true,
+        authority,
+        paymentUrl,
+        code: data.data.code,
+      };
+    }
+
+    throw new Error(data.data?.message || 'خطا در ایجاد درخواست پرداخت');
+  } catch (error) {
+    console.error('Payment request error:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+    });
+    
+    if (error.response?.data) {
+      const zarinpalError = error.response.data;
+      throw new Error(zarinpalError.errors?.message || error.message || 'خطا در ارتباط با زرین‌پال');
+    }
+    throw error;
+  }
+};
+
+// ============================================
+// کد فرانت‌اند (src/lib/payment.js)
+// ============================================
+
+async createPaymentRequest() {
+  // ...
+  // تبدیل قیمت از تومان به ریال (ضرب در 10)
+  const amountInRials = Math.round((this.paymentData.amount || 0) * 10);
+
+  const response = await fetch(`${API_BASE_URL}/api/payment/request`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      amount: amountInRials, // ⚠️ قیمت به ریال
+      description: this.paymentData.description,
+      callbackUrl: this.paymentData.callbackUrl,
+      orderId: this.paymentData.orderId,
+      metadata: {
+        mobile: this.paymentData.customerInfo?.phone || '',
+        email: this.paymentData.customerInfo?.email || '',
+      },
+    }),
+  });
+  // ...
+}
+
+// ============================================
+// نکات مهم:
+// ============================================
+// ⚠️ 1. در فرانت‌اند: مبلغ از تومان به ریال تبدیل می‌شود (amount * 10)
+// ⚠️ 2. در سرور: مبلغ مستقیماً به زرین‌پال ارسال می‌شود (باید ریال باشد)
+// ⚠️ 3. در callback: مبلغ از total_amount (تومان) به ریال تبدیل می‌شود (total_amount * 10)
+// ⚠️ 4. Authority در دیتابیس ذخیره می‌شود
+// ⚠️ 5. مبلغ در دیتابیس به تومان ذخیره می‌شود (total_amount)

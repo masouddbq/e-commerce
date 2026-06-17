@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import CloseIcon from '@mui/icons-material/Close';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { supabase } from '../../lib/supabase';
 
 const QuickSearchModal = ({ isOpen, onClose }) => {
@@ -9,7 +10,25 @@ const QuickSearchModal = ({ isOpen, onClose }) => {
   const [showResults, setShowResults] = useState(false);
   const [productResults, setProductResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const searchRef = useRef(null);
+  const helpRef = useRef(null);
+
+  // بستن مودال راهنما هنگام کلیک خارج از آن
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isHelpModalOpen && helpRef.current && !helpRef.current.contains(event.target)) {
+        setIsHelpModalOpen(false);
+      }
+    };
+
+    if (isHelpModalOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [isHelpModalOpen]);
 
   // لیست کامل نام ماشین‌ها
   const allCars = [
@@ -217,7 +236,36 @@ const QuickSearchModal = ({ isOpen, onClose }) => {
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
           <h2 className="text-xl font-bold">جستجوی سریع محصولات</h2>
+            <div className="relative flex-shrink-0" ref={helpRef}>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsHelpModalOpen(!isHelpModalOpen);
+                }}
+                onMouseEnter={() => setIsHelpModalOpen(true)}
+                className="p-1 hover:bg-white hover:bg-opacity-20 rounded-full transition-all duration-300"
+                aria-label="راهنما"
+              >
+                <HelpOutlineIcon className="text-lg" />
+              </button>
+              {/* Help Modal - Tooltip */}
+              {isHelpModalOpen && (
+                <div 
+                  className="absolute top-full right-0 mt-2 w-64 sm:w-72 bg-white text-gray-800 rounded-lg shadow-xl p-4 text-sm z-50 border border-gray-200"
+                  onMouseEnter={() => setIsHelpModalOpen(true)}
+                  onMouseLeave={() => setIsHelpModalOpen(false)}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <p className="text-right leading-relaxed">
+                    توجه کنید که در جستجو هر کلمه محصولات مشابه قابل استفاده نسبت به محصول شما هم نمایش داده خواهد شد
+                  </p>
+                  <div className="absolute bottom-full right-4 w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-b-4 border-b-white"></div>
+                </div>
+              )}
+            </div>
+          </div>
           <button
             onClick={handleClose}
             className="text-white hover:text-gray-200 transition-colors"

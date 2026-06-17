@@ -24,7 +24,8 @@ const Footer = () => {
   const companyLinks = [
     { id: 1, title: "درباره ما", link: "/about" },
     { id: 2, title: "تماس با ما", link: "/contact" },
-    { id: 3, title: "باشگاه مشتریان", link: "/club" },
+    // باشگاه مشتریان - موقتاً غیرفعال
+    // { id: 3, title: "باشگاه مشتریان", link: "/club" },
     { id: 4, title: "قوانین و مقررات", link: "/terms" },
     { id: 5, title: "حریم خصوصی", link: "/privacy" },
   ];

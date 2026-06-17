@@ -187,9 +187,6 @@ const ProductDetail = () => {
     }
   };
 
-  const handleSubmitReview = async (reviewData) => {
-    console.log('نظر ارسال شد:', reviewData);
-  };
 
   // تابع تعویض عکس اصلی با عکس گالری
   const handleImageSwap = (galleryImageIndex) => {
@@ -270,6 +267,28 @@ const ProductDetail = () => {
   // تولید URL کانونیکال برای محصول
   const productUrl = `https://lent-shop.ir/product/${brand || product.brand?.toLowerCase()}/${product.id}`;
 
+  // تبدیل قیمت‌ها به عدد (حذف کاما و کاراکترهای غیر عددی)
+  const cleanPrice = (price) => {
+    if (!price) return '0';
+    return price.toString().replace(/[^\d]/g, '');
+  };
+
+  const productPrice = cleanPrice(product.price || '0');
+  const productOldPrice = cleanPrice(product.originalPrice || product.price || '0');
+  
+  // تعیین وضعیت موجودی
+  const stockStatus = product.stockStatus === 'موجود' || (product.stockCount && product.stockCount > 0) 
+    ? 'instock' 
+    : 'outofstock';
+  
+  // دریافت URL کامل تصویر محصول
+  const imageUrl = product.image 
+    ? (product.image.startsWith('http') ? product.image : `https://lent-shop.ir${product.image}`)
+    : 'https://lent-shop.ir/favicon.svg';
+  
+  // دریافت گارانتی از specifications
+  const guarantee = product.specifications?.warranty || product.specifications?.guarantee || '';
+
   return (
     <>
       <Helmet>
@@ -280,8 +299,17 @@ const ProductDetail = () => {
         <meta property="og:description" content={`${product.name} - قیمت: ${formatPriceWithUnit(product.price)}. ${product.description || 'محصول با کیفیت و دوام بالا'}`} />
         <meta property="og:type" content="product" />
         <meta property="og:url" content={productUrl} />
-        {product.image && <meta property="og:image" content={product.image} />}
+        {product.image && <meta property="og:image" content={imageUrl} />}
         <link rel="canonical" href={productUrl} />
+        
+        {/* Torob Meta Tags */}
+        <meta name="product_id" content={product.id} />
+        <meta name="product_name" content={product.name || ''} />
+        <meta property="og:image" content={imageUrl} />
+        <meta name="product_price" content={productPrice} />
+        <meta name="product_old_price" content={productOldPrice} />
+        <meta name="availability" content={stockStatus} />
+        {guarantee && <meta name="guarantee" content={guarantee} />}
       </Helmet>
       <div className="min-h-screen py-8">
       {/* Breadcrumbs */}
@@ -534,11 +562,11 @@ const ProductDetail = () => {
         </div>
 
         {/* Reviews Section */}
-        <ReviewSection 
-          productId={product.id}
-          reviews={product.reviews}
-          onSubmitReview={handleSubmitReview}
-        />
+        {product && product.id && (
+          <ReviewSection 
+            productId={product.id}
+          />
+        )}
       </div>
     </div>
     </>
